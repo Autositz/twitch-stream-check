@@ -3,4 +3,8 @@ Twitch Stream Check
 This tool will check Twitch streams in a given interval and report results.
 
 Download at
+<<<<<<< HEAD
 https://github.com/Autositz/twitch-stream-check/blob/master/downloads/twitch-stream-check.exe?raw=true
+=======
+https://github.com/Autositz/twitch-stream-check/downloads/twitch-stream-check.exe
+>>>>>>> origin/master
