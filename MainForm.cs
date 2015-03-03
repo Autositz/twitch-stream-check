@@ -7,7 +7,7 @@
  * To change this template use Tools | Options | Coding | Edit Standard Headers.
  */
 
-#define _HACK
+//#define _HACK
 
 using System;
 using System.Diagnostics;
@@ -98,7 +98,7 @@ namespace twitch_stream_check
             // FIXME: Make sure to set checkinterval timer for release!
             // start timer with 1000ms * 60s * interval-minutes
             tBackgroundTimer.Interval = (settings.checkinterval * 60 * 1000);
-            tBackgroundTimer.Interval = 10000; // uncomment this for faster cycles on small entries
+//            tBackgroundTimer.Interval = 10000; // uncomment this for faster cycles on small entries
             // redo associated actions
             tBackgroundTimer.AutoReset = true;
             // set the action we want to do at the given interval
@@ -569,8 +569,9 @@ namespace twitch_stream_check
             } else {
                 Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKSTREAMS: Another check is still running..." + iCurrentCheck + "/" + iMaxCheck);
                 // FIXME: Make sure to have this enabled for release! So users get a warning when their list can't be processed in between intervals.
-//                MessageBox.Show("Consider raising the interval a bit." + Environment.NewLine + "Processing " + iCurrentCheck + "/" + iMaxCheck,
-//                                "Check already running", MessageBoxButtons.OK, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1);
+                MessageBox.Show("Consider raising the interval a bit." + Environment.NewLine + "Processing " + iCurrentCheck + "/" + iMaxCheck + Environment.NewLine + Environment.NewLine +
+                                "If this message keeps coming up over and over again at the same step then consider restarting the program.",
+                                "Check already running", MessageBoxButtons.OK, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1);
             }
         }
         
