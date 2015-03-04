@@ -12,10 +12,8 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Drawing;
 using System.Net;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Web.Script.Serialization;
@@ -38,7 +36,7 @@ namespace twitch_stream_check
         private int iMaxCheck; // number of entries of streams to check
         private int _iActiveStreams; // currently active streams to display in icon tooltip
         private System.Timers.Timer tBackgroundTimer; // background timer to call events
-        
+        private Logging Log; // use logging for exceptions
         
         public MainForm()
         {
@@ -53,6 +51,8 @@ namespace twitch_stream_check
             this.ShowInTaskbar = false;
             this.Hide();
             
+            // load error logging
+            this.Log = new Logging();
             // load stored settings from file
             this.settings = MySettings.Load();
             // set the check value if a check is currently running
@@ -349,9 +349,9 @@ namespace twitch_stream_check
                         StreamReader reader = new StreamReader(stream, Encoding.UTF8);
                         responseString = reader.ReadToEnd();
                     }
-                } catch (Exception e) {
-                    Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Failed on datastream: " + e.Message);
-                    throw;
+                } catch (Exception ex) {
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Failed on datastream: " + ex.Message);
+                    Log.Add("getOnlineStatus>" + ex.Message);
                 }
                 
                 
@@ -368,9 +368,9 @@ namespace twitch_stream_check
                         
                         sReturn = data.stream.game;
                     }
-                } catch (Exception e) {
-                    Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Failed on Deserialize: " + e.Message);
-                    throw;
+                } catch (Exception ex) {
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Failed on Deserialize: " + ex.Message);
+                    Log.Add("getOnlineStatus>" + ex.Message);
                 }
                 
                 
@@ -389,14 +389,19 @@ namespace twitch_stream_check
         public bool doWebRequest(string sURL)
         {
             bool bRet = false;
-            Debug.WriteLineIf(GlobalVar.DEBUG, "DOWEBREQUEST: Making a new Web Request");
-            HttpWebRequest HttpWReq = (HttpWebRequest)WebRequest.Create(sURL);
-            Debug.WriteLineIf(GlobalVar.DEBUG, "DOWEBREQUEST: Putting response into var");
-            HttpWResp = (HttpWebResponse)HttpWReq.GetResponse();
-            Debug.WriteLineIf(GlobalVar.DEBUG, "DOWEBREQUEST: Response stored for future use");
             
-            if (HttpWResp.StatusCode == HttpStatusCode.OK)
-                bRet = true;
+            try {
+                Debug.WriteLineIf(GlobalVar.DEBUG, "DOWEBREQUEST: Making a new Web Request");
+                HttpWebRequest HttpWReq = (HttpWebRequest)WebRequest.Create(sURL);
+                Debug.WriteLineIf(GlobalVar.DEBUG, "DOWEBREQUEST: Putting response into var");
+                HttpWResp = (HttpWebResponse)HttpWReq.GetResponse();
+                Debug.WriteLineIf(GlobalVar.DEBUG, "DOWEBREQUEST: Response stored for future use");
+                
+                if (HttpWResp.StatusCode == HttpStatusCode.OK)
+                    bRet = true;
+            } catch (Exception ex) {
+                Log.Add("doWebRequest>" + ex.Message);
+            }
             
             return bRet;
         }
@@ -416,6 +421,7 @@ namespace twitch_stream_check
             
             Debug.WriteLineIf(GlobalVar.DEBUG, "CREATEMENUENTRY: START");
             Debug.WriteLineIf(GlobalVar.DEBUG, "CREATEMENUENTRY: Creating new Menu entry for " + sUser + " playing game " + sGame);
+            bool bRet = false;
             int iMenuIDX = MyMenu.Items.IndexOfKey(sUser);
             Debug.WriteLineIf(GlobalVar.DEBUG, "CREATEMENUENTRY: Result of looking up menu entry: " + iMenuIDX);
             
@@ -431,19 +437,20 @@ namespace twitch_stream_check
                 // add the new stream on top of the menu
                 try {
                     MyMenu.Items.Insert(0, tsiNewItem);
+                    bRet = true;
                     // increase active streams number only when we are really adding a new one
                     iActiveStreams++;
-                } catch (Exception e) {
-                    object[] tmp = ParseException(e);
-                    Debug.WriteLineIf(GlobalVar.DEBUG, "!EXCEPTION!:CREATEMENUENTRY: Error inserting menu item (" + tmp[2] + ":" + tmp[3] + ":"  + tmp[0] + "): " + e.Message);
-                    throw;
+                } catch (Exception ex) {
+                    object[] tmp = ParseException(ex);
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "!EXCEPTION!:CREATEMENUENTRY: Error inserting menu item (" + tmp[2] + ":" + tmp[3] + ":"  + tmp[0] + "): " + ex.Message);
+                    Log.Add("createMenuEntry>" + ex.Message);
                 }
                 
                 Debug.WriteLineIf(GlobalVar.DEBUG, "CREATEMENUENTRY: Item added to Menu");
             }
             
             Debug.WriteLineIf(GlobalVar.DEBUG, "CREATEMENUENTRY: END");
-            return true;
+            return bRet;
         }
         
         /// <summary>
@@ -460,6 +467,7 @@ namespace twitch_stream_check
             }
             
             Debug.WriteLineIf(GlobalVar.DEBUG, "removeMenuEntry: Remove menu entry for stream: " + sUser);
+            bool bRet = false;
             int iMenuIDX = MyMenu.Items.IndexOfKey(sUser);
             Debug.WriteLineIf(GlobalVar.DEBUG, "removeMenuEntry: Menu index: " + iMenuIDX);
             
@@ -468,13 +476,14 @@ namespace twitch_stream_check
                 Debug.WriteLineIf(GlobalVar.DEBUG, "removeMenuEntry: Entry found at: " + iMenuIDX);
                 notifyIcon1.ShowBalloonTip(750, "Stream is Offline", sUser, ToolTipIcon.Info);
                 MyMenu.Items.RemoveAt(iMenuIDX);
+                bRet = true;
                 // decrease active streams number only when we are really removing an entry
                 iActiveStreams--;
             }
             
             
             Debug.WriteLineIf(GlobalVar.DEBUG, "REMOVEMENUENTRY: END");
-            return true;
+            return bRet;
         }
         
         private bool updateToolTip()
@@ -482,7 +491,13 @@ namespace twitch_stream_check
             if (this.InvokeRequired)
                 return (bool)this.Invoke ((Func<bool>)updateToolTip);
             
-            notifyIcon1.Text = iActiveStreams + " active Streams";
+            // display info when we are currently running an update
+            if (bGettingData) {
+                notifyIcon1.Text = iActiveStreams + " active Streams (Updating " + iCurrentCheck + "/" + iMaxCheck + ")";
+            } else {
+                notifyIcon1.Text = iActiveStreams + " active Streams";
+            }
+            
             return true;
         }
         
@@ -495,7 +510,11 @@ namespace twitch_stream_check
             Debug.WriteLineIf(GlobalVar.DEBUG, "OPENSTREAM: Launch a browser to watch stream");
             string sURL = getStreamURL(convertAlphaNum(sUser));
             Debug.WriteLineIf(GlobalVar.DEBUG, "OPENSTREAM: Opening URL: " + sURL);
-            Process.Start(sURL);
+            try {
+                Process.Start(sURL);
+            } catch (Exception ex) {
+                Log.Add("openStream>" + ex.Message);
+            }
         }
         
         /// <summary>
@@ -552,19 +571,30 @@ namespace twitch_stream_check
             return bActive;
         }
         
+        /// <summary>
+        /// Check all configured streams
+        /// </summary>
         public void checkStreams()
         {
+            // create a local copy of the current list of streams to avoid getting a mixup when changing settings, settings were used directly earlier
+            string[] aCheckUsers = settings.checkusers; // store a local copy of streamlist
+            
             Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKSTREAMS: We gotta check our list of streams");
             if (!bGettingData) {
                 bGettingData = true;
-                iMaxCheck = settings.checkusers.Length;
-                for (int i = 0; i < iMaxCheck; i++) {
-                    iCurrentCheck = i + 1;
-                    checkUser(settings.checkusers[i]);
+                
+                // set maxcheck for progress display
+                iMaxCheck = aCheckUsers.Length;
+                try {
+                    for (int i = 0; i < iMaxCheck; i++) {
+                        iCurrentCheck = i + 1;
+                        checkUser(aCheckUsers[i]);
+                    }
+                } catch (Exception ex) {
+                    // user index could be out of bounds
+                    Log.Add("checkStreams>" + ex.Message);
                 }
-//                foreach (string sUser in settings.checkusers) {
-//                    checkUser(sUser);
-//                }
+                
                 bGettingData = false;
             } else {
                 Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKSTREAMS: Another check is still running..." + iCurrentCheck + "/" + iMaxCheck);
@@ -580,12 +610,12 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="e">Supply the Exception that has occured.</param>
         /// <returns>Returns object: 0 Line number, 1 Column number, 2 Filename, 3 Methodname</returns>
-        public object[] ParseException(Exception e)
+        public object[] ParseException(Exception ex)
         {
             object[] data = { 0, 0, "", "" }; // <int>line, <int>column, <string>filename, <string>methodname
             
             //Get a StackTrace object for the exception
-            StackTrace st = new StackTrace(e, true);
+            StackTrace st = new StackTrace(ex, true);
         
             //Get the first stack frame
             StackFrame frame = st.GetFrame(0);
@@ -609,7 +639,11 @@ namespace twitch_stream_check
         {
             string sLink = e.Link.LinkData.ToString();
             Debug.WriteLineIf(GlobalVar.DEBUG, "LINKLABELFEEDBACK_LINKCLICKED: Opening Link: " + sLink);
-            System.Diagnostics.Process.Start(sLink);
+            try {
+                Process.Start(sLink);
+            } catch (Exception ex) {
+                Log.Add("linkLabelFeedback_LinkClicked>" + ex.Message);
+            }
         }
         
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -726,20 +760,54 @@ namespace twitch_stream_check
                     Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGS:LOAD: Convert our loaded data into an useable object");
                     t = (new JavaScriptSerializer()).Deserialize<T>(File.ReadAllText(fileName));
                 }
-            } catch (Exception e) {
-                Debug.WriteLineIf(GlobalVar.DEBUG, "!EXCEPTION!:SETTINGS:LOAD: Something went wrong during load: " + e.Message);
+            } catch (Exception ex) {
+                Debug.WriteLineIf(GlobalVar.DEBUG, "!EXCEPTION!:SETTINGS:LOAD: Something went wrong during load: " + ex.Message);
                 MessageBox.Show("Error loading settings." + Environment.NewLine + "Using default values", "Info", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1);
-                //throw;
+                Logging Log = new Logging();
+                Log.Add("AppSettings:Load>" + ex.Message);
             }
             return t;
         }
     }
     
+    public class Logging
+    {
+        private string sAppname; // name of current active application
+        
+        public Logging()
+        {
+            // get filename to use for logging
+            try {
+                sAppname = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            } catch (Exception) {
+                sAppname = "twitch-stream-check";
+            }
+        }
+        
+        public void Add(string sLine)
+        {
+            sLine = DateTime.Now.ToString("yyMMdd-HHmmss: ") + sLine;
+            // add to existing file or create new with the application name
+            try {
+                StreamWriter file = new StreamWriter(sAppname + ".log", true);
+                file.WriteLine(sLine);
+                file.Close();
+            } catch (Exception ex) {
+                // show the user that there was an error and we were also unable to write to the error log
+                MessageBox.Show(sLine + Environment.NewLine + Environment.NewLine +
+                                "Error while trying to write to error log:" + Environment.NewLine + ex.Message + Environment.NewLine + Environment.NewLine +
+                                "Application will now exit!" + Environment.NewLine + Environment.NewLine +
+                                "Please report this error at" + Environment.NewLine + GlobalVar.PROJECTURL, "ERROR", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1);
+                Environment.Exit(0);
+            }
+        }
+    }
 
     
     public static class GlobalVar
     {
         public const bool DEBUG = true; // enable or disable debug messages
         public const bool GENERATEDATA = true; // generate random data (add/remove entries randomly)
+        public const string PROJECTURL = "https://github.com/Autositz/twitch-stream-check/issues"; // link to the project page to report errors
     }
 }
