@@ -10,6 +10,7 @@ using System;
 using System.Windows.Forms;
 using System.Reflection;
 using System.Diagnostics;
+using System.Threading;
 
 namespace twitch_stream_check
 {
@@ -18,6 +19,10 @@ namespace twitch_stream_check
     /// </summary>
     internal sealed class Program
     {
+        static Mutex mRunning;
+        public static Form objMyForm; // dummy form
+        public static Label objMyLabel; // dummy form
+        
         /// <summary>
         /// Program entry point.
         /// </summary>
@@ -26,15 +31,69 @@ namespace twitch_stream_check
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            // prevent form from being displayed at startup
-            MainForm objForm = new MainForm();
             
-            // if we don not have our JSON.NET .dll we gotta use the embedded one
-            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
+            bool bFirstRun = false; // we assume this is our first instance
+            string sMutex = "twitchstreamcheck_354tfgw345rhfd54z"; // set a unique name
+            try
+            {
+                // open a new mutex and get an exception if there is already one
+                Mutex.OpenExisting(sMutex);
+            }
+            catch
+            {
+                Program.mRunning = new Mutex(true, sMutex);
+                bFirstRun = true;
+            }
             
-            Application.Run(objForm);
+            if (!bFirstRun) {
+                Application.Exit();
+                MessageBox.Show("Program is already running.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1);
+            } else {
+                
+//                objMyLabel = new Label();
+//                objMyLabel.Size = new System.Drawing.Size(800, 600);
+//                objMyLabel.AutoSize = true;
+//                objMyLabel.BorderStyle = BorderStyle.FixedSingle;
+//                objMyLabel.Text = "INFO";
+//                objMyLabel.Visible = true;
+//                objMyLabel.Show();
+//                objMyLabel.BringToFront();
+//                
+//                objMyForm = new Form();
+//                objMyForm.SuspendLayout();
+//                objMyForm.Controls.Add(objMyLabel);
+//                objMyForm.ResumeLayout();
+//                objMyForm.PerformLayout();
+//                objMyForm.Show();
+                
+                
+                System.Timers.Timer tMainTimer = new System.Timers.Timer();
+                tMainTimer.Interval = 1500; // uncomment this for faster cycles on small entries
+                // redo associated actions
+                tMainTimer.AutoReset = true;
+                // set the action we want to do at the given interval
+                tMainTimer.Elapsed += new System.Timers.ElapsedEventHandler(Program.test);
+                // make sure the timer is starting
+                tMainTimer.Enabled = true; // enable timer
+                // prevent form from being displayed at startup
+                SettingsForm objSettingsForm = new SettingsForm();
+                
+                // if we do not have our JSON.NET .dll we gotta use the embedded one
+                AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
+                
+                Application.Run();
+                
+                // clear up what we used
+                objSettingsForm.Dispose();
+            }
             
         }
+        
+        private static void test(object sender, EventArgs e)
+        {
+            
+        }
+        
         
         static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
         {

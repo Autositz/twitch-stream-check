@@ -7,7 +7,7 @@
  * To change this template use Tools | Options | Coding | Edit Standard Headers.
  */
 
-//#define _HACK
+#define _HACK
 
 using System;
 using System.Diagnostics;
@@ -25,9 +25,9 @@ namespace twitch_stream_check
 {
     
     /// <summary>
-    /// Description of MainForm.
+    /// Description of SettingsForm.
     /// </summary>
-    public partial class MainForm : Form
+    public partial class SettingsForm : Form
     {
         private MySettings settings; // our settings
         private HttpWebResponse HttpWResp; // our reply from our http request
@@ -38,7 +38,7 @@ namespace twitch_stream_check
         private System.Timers.Timer tBackgroundTimer; // background timer to call events
         private Logging Log; // use logging for exceptions
         
-        public MainForm()
+        public SettingsForm()
         {
             //
             // The InitializeComponent() call is required for Windows Forms designer support.
@@ -76,12 +76,12 @@ namespace twitch_stream_check
             linkLabelFeedback.Text = "Send Feedback via eMail\r\nSend Feedback via Steam";
             // get 2nd occurance of Send Feedback to avoid counting it over and over again
             i = linkLabelFeedback.Text.IndexOf("Send Feedback");
-            Debug.WriteLineIf(GlobalVar.DEBUG, "MAINFORM: Send Feedback 1 located at: " + i);
+            Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGSFORM: Send Feedback 1 located at: " + i);
             linkLabelFeedback.Links.Add( i, 13, "mailto:"+sTMP+"?subject=[TwitchStreamCheckerFeedback]");
             sTMP = null; // clear tempvar
             // get 2nd occurance of Send Feedback to avoid counting it over and over again
             i = GetNthIndex(linkLabelFeedback.Text, "Send Feedback", 2);
-            Debug.WriteLineIf(GlobalVar.DEBUG, "MAINFORM: Send Feedback 2 located at: " + i);
+            Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGSFORM: Send Feedback 2 located at: " + i);
             linkLabelFeedback.Links.Add( i, 13, "steam://friends/message/76561197960330502"); // autositz: 76561197960330502  kretze: 76561197993179564
             
             
@@ -95,10 +95,10 @@ namespace twitch_stream_check
             
             // create a new timer to run stuff at given interval
             tBackgroundTimer = new System.Timers.Timer();
-            // FIXME: Make sure to set checkinterval timer for release!
+            // FIXME RELEASE: Make sure to set checkinterval timer for release!
             // start timer with 1000ms * 60s * interval-minutes
             tBackgroundTimer.Interval = (settings.checkinterval * 60 * 1000);
-//            tBackgroundTimer.Interval = 10000; // uncomment this for faster cycles on small entries
+            tBackgroundTimer.Interval = 15000; // uncomment this for faster cycles on small entries
             // redo associated actions
             tBackgroundTimer.AutoReset = true;
             // set the action we want to do at the given interval
@@ -412,7 +412,7 @@ namespace twitch_stream_check
         /// <param name="sUser">Streamname</param>
         private bool createMenuEntry(string sUser, string sGame)
         {
-            // make sure we can access the mainform
+            // make sure we can access the settingsform
             if (this.InvokeRequired)
             {
                 Debug.WriteLineIf(GlobalVar.DEBUG, "CREATEMENUENTRY: NEEDS INVOKE");
@@ -459,7 +459,7 @@ namespace twitch_stream_check
         /// <param name="sUser">Streamname</param>
         private bool removeMenuEntry(string sUser)
         {
-            // make sure we can access the mainform
+            // make sure we can access the settingsform
             if (this.InvokeRequired)
             {
                 Debug.WriteLineIf(GlobalVar.DEBUG, "REMOVEMENUENTRY: NEEDS INVOKE");
@@ -598,10 +598,10 @@ namespace twitch_stream_check
                 bGettingData = false;
             } else {
                 Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKSTREAMS: Another check is still running..." + iCurrentCheck + "/" + iMaxCheck);
-                // FIXME: Make sure to have this enabled for release! So users get a warning when their list can't be processed in between intervals.
-                MessageBox.Show("Consider raising the interval a bit." + Environment.NewLine + "Processing " + iCurrentCheck + "/" + iMaxCheck + Environment.NewLine + Environment.NewLine +
-                                "If this message keeps coming up over and over again at the same step then consider restarting the program.",
-                                "Check already running", MessageBoxButtons.OK, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1);
+                // FIXME RELEASE: Make sure to have this enabled for release! So users get a warning when their list can't be processed in between intervals.
+//                MessageBox.Show("Consider raising the interval a bit." + Environment.NewLine + "Processing " + iCurrentCheck + "/" + iMaxCheck + Environment.NewLine + Environment.NewLine +
+//                                "If this message keeps coming up over and over again at the same step then consider restarting the program.",
+//                                "Check already running", MessageBoxButtons.OK, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1);
             }
         }
         
@@ -646,17 +646,21 @@ namespace twitch_stream_check
             }
         }
         
-        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
-    	{
-            Debug.WriteLineIf(GlobalVar.DEBUG, "MAINFORM_FORMCLOSING: Someone clicked Close");
-    		if (e.CloseReason == CloseReason.UserClosing)
-    		{
-    		    Debug.WriteLineIf(GlobalVar.DEBUG, "MAINFORM_FORMCLOSING: User closed the form");
-    			if (MessageBox.Show("Please use OK or Cancel to close the settings." + Environment.NewLine + Environment.NewLine +
-    		                        "Do you want to shutdown the program?", "Confirm Exit", MessageBoxButtons.YesNo, MessageBoxIcon.Asterisk) != DialogResult.Yes)
-    				e.Cancel = true;
-    		}
-    	}
+        private void SettingsForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGSFORM_FORMCLOSING: Someone clicked Close");
+            if (e.CloseReason == CloseReason.UserClosing) {
+                Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGSFORM_FORMCLOSING: User closed the form");
+                e.Cancel = true;
+                
+                // TODO: lazy work to hide the form, remove it and recreate maybe? no need to hold the settings form in memory all the time i guess...
+                SettingsForm senders = sender as SettingsForm;
+                if (senders != null) {
+                    senders.Hide();
+                }
+                
+            }
+        }
         
         /// <summary>
         /// Wrapper to update ToolTip everytime the streamer count changes

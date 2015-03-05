@@ -8,7 +8,7 @@
  */
 namespace twitch_stream_check
 {
-    partial class MainForm
+    partial class SettingsForm
     {
         /// <summary>
         /// Designer variable used to keep track of non-visual components.
@@ -53,7 +53,7 @@ namespace twitch_stream_check
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SettingsForm));
             this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
             this.MyMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
@@ -87,7 +87,7 @@ namespace twitch_stream_check
             this.toolStripMenuItem1,
             this.aboutToolStripMenuItem,
             this.exitToolStripMenuItem});
-            this.MyMenu.Name = "contextMenuStrip1";
+            this.MyMenu.Name = "notifyIconMenu";
             this.MyMenu.Size = new System.Drawing.Size(117, 76);
             // 
             // toolStripSeparator1
@@ -236,7 +236,7 @@ namespace twitch_stream_check
             this.linkLabelFeedback.VisitedLinkColor = System.Drawing.Color.Blue;
             this.linkLabelFeedback.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabelFeedback_LinkClicked);
             // 
-            // MainForm
+            // SettingsForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -255,10 +255,10 @@ namespace twitch_stream_check
             this.Icon = this.notifyIcon1.Icon;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.Name = "MainForm";
+            this.Name = "SettingsForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Settings";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.SettingsForm_FormClosing);
             this.MyMenu.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
