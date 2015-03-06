@@ -19,7 +19,6 @@ namespace twitch_stream_check
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ToolStripMenuItem aboutToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
-        private System.Windows.Forms.TextBox textBoxStreamers;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Button buttonSettingsGetUsers;
         private System.Windows.Forms.Label label1;
@@ -30,6 +29,10 @@ namespace twitch_stream_check
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem1;
         private System.Windows.Forms.TextBox textBoxAccountCheck;
         private System.Windows.Forms.LinkLabel linkLabelFeedback;
+        private System.Windows.Forms.DataGridView dgvStreams;
+        private System.Data.DataSet dsStreams;
+        private System.Windows.Forms.DataGridViewCheckBoxColumn bImportant;
+        private System.Windows.Forms.DataGridViewTextBoxColumn sStream;
         
         /// <summary>
         /// Disposes resources used by the form.
@@ -60,7 +63,6 @@ namespace twitch_stream_check
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.textBoxStreamers = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.buttonSettingsGetUsers = new System.Windows.Forms.Button();
             this.label2 = new System.Windows.Forms.Label();
@@ -70,7 +72,13 @@ namespace twitch_stream_check
             this.buttonSettingsOK = new System.Windows.Forms.Button();
             this.buttonSettingsCANCEL = new System.Windows.Forms.Button();
             this.linkLabelFeedback = new System.Windows.Forms.LinkLabel();
+            this.dgvStreams = new System.Windows.Forms.DataGridView();
+            this.bImportant = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.sStream = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dsStreams = new System.Data.DataSet();
             this.MyMenu.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvStreams)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dsStreams)).BeginInit();
             this.SuspendLayout();
             // 
             // notifyIcon1
@@ -118,26 +126,14 @@ namespace twitch_stream_check
             this.exitToolStripMenuItem.Text = "Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.ExitToolStripMenuItemClick);
             // 
-            // textBoxStreamers
-            // 
-            this.textBoxStreamers.Font = new System.Drawing.Font("Verdana", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.textBoxStreamers.Location = new System.Drawing.Point(13, 130);
-            this.textBoxStreamers.Multiline = true;
-            this.textBoxStreamers.Name = "textBoxStreamers";
-            this.textBoxStreamers.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.textBoxStreamers.Size = new System.Drawing.Size(232, 183);
-            this.textBoxStreamers.TabIndex = 2;
-            this.textBoxStreamers.Text = "streamer1\r\nstreamer2\r\nstreamer3\r\nstreamer4\r\nstreamer5\r\nstreamer6\r\nstreamer7\r\nstre" +
-    "amer8\r\nstreamer9\r\nstreamer10\r\nstreamer11\r\nstreamer12\r\nstreamer13";
-            this.textBoxStreamers.WordWrap = false;
-            // 
             // label1
             // 
             this.label1.Location = new System.Drawing.Point(13, 56);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(232, 71);
             this.label1.TabIndex = 1;
-            this.label1.Text = "Enter twitch usernames you wish to check\r\nOnly one username per line\r\n";
+            this.label1.Text = "Enter twitch usernames you wish to check\r\n! = Important stream will be checked mo" +
+    "re often\r\n\r\n";
             // 
             // buttonSettingsGetUsers
             // 
@@ -236,12 +232,56 @@ namespace twitch_stream_check
             this.linkLabelFeedback.VisitedLinkColor = System.Drawing.Color.Blue;
             this.linkLabelFeedback.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabelFeedback_LinkClicked);
             // 
+            // dgvStreams
+            // 
+            this.dgvStreams.AllowUserToResizeColumns = false;
+            this.dgvStreams.AllowUserToResizeRows = false;
+            this.dgvStreams.AutoGenerateColumns = false;
+            this.dgvStreams.AutoSizeRowsMode = System.Windows.Forms.DataGridViewAutoSizeRowsMode.AllCells;
+            this.dgvStreams.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dgvStreams.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.bImportant,
+            this.sStream});
+            this.dgvStreams.DataSource = this.dsStreams;
+            this.dgvStreams.Location = new System.Drawing.Point(13, 130);
+            this.dgvStreams.Name = "dgvStreams";
+            this.dgvStreams.RowHeadersVisible = false;
+            this.dgvStreams.Size = new System.Drawing.Size(305, 183);
+            this.dgvStreams.TabIndex = 11;
+            // 
+            // bImportant
+            // 
+            this.bImportant.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.bImportant.DataPropertyName = "bImportant";
+            this.bImportant.HeaderText = "!";
+            this.bImportant.MinimumWidth = 15;
+            this.bImportant.Name = "bImportant";
+            this.bImportant.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+            this.bImportant.ToolTipText = "Is this an important stream and should be monitored seperatly?";
+            this.bImportant.Width = 21;
+            // 
+            // sStream
+            // 
+            this.sStream.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.sStream.DataPropertyName = "sStreamname";
+            this.sStream.HeaderText = "Stream names";
+            this.sStream.MaxInputLength = 250;
+            this.sStream.MinimumWidth = 50;
+            this.sStream.Name = "sStream";
+            this.sStream.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+            this.sStream.ToolTipText = "Name of the stream to follow";
+            // 
+            // dsStreams
+            // 
+            this.dsStreams.DataSetName = "NewDataSet";
+            // 
             // SettingsForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.buttonSettingsCANCEL;
             this.ClientSize = new System.Drawing.Size(684, 434);
+            this.Controls.Add(this.dgvStreams);
             this.Controls.Add(this.linkLabelFeedback);
             this.Controls.Add(this.buttonSettingsCANCEL);
             this.Controls.Add(this.buttonSettingsOK);
@@ -251,7 +291,6 @@ namespace twitch_stream_check
             this.Controls.Add(this.label2);
             this.Controls.Add(this.buttonSettingsGetUsers);
             this.Controls.Add(this.label1);
-            this.Controls.Add(this.textBoxStreamers);
             this.Icon = this.notifyIcon1.Icon;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
@@ -260,6 +299,8 @@ namespace twitch_stream_check
             this.Text = "Settings";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.SettingsForm_FormClosing);
             this.MyMenu.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.dgvStreams)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dsStreams)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 

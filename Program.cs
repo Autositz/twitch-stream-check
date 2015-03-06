@@ -20,8 +20,8 @@ namespace twitch_stream_check
     internal sealed class Program
     {
         static Mutex mRunning;
-        public static Form objMyForm; // dummy form
-        public static Label objMyLabel; // dummy form
+        public static Form objMyForm; // dummy form testing
+        public static Label objMyLabel; // dummy form testing
         
         /// <summary>
         /// Program entry point.
@@ -50,6 +50,10 @@ namespace twitch_stream_check
                 MessageBox.Show("Program is already running.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1);
             } else {
                 
+                // if we do not have our JSON.NET .dll we gotta use the embedded one
+                // this has to be one of the earliest things...
+                AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
+                
 //                objMyLabel = new Label();
 //                objMyLabel.Size = new System.Drawing.Size(800, 600);
 //                objMyLabel.AutoSize = true;
@@ -77,9 +81,6 @@ namespace twitch_stream_check
                 tMainTimer.Enabled = true; // enable timer
                 // prevent form from being displayed at startup
                 SettingsForm objSettingsForm = new SettingsForm();
-                
-                // if we do not have our JSON.NET .dll we gotta use the embedded one
-                AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
                 
                 Application.Run();
                 

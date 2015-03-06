@@ -20,7 +20,7 @@
     <SignAssembly>False</SignAssembly>
     <DelaySign>False</DelaySign>
     <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
-    <ApplicationIcon>..\misc\dw-skull-gold-online-convert.ico</ApplicationIcon>
+    <ApplicationIcon>misc\dw-skull-gold-online-convert.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Platform)' == 'AnyCPU' ">
     <PlatformTarget>x86</PlatformTarget>
@@ -82,6 +82,7 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Functions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

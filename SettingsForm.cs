@@ -12,13 +12,14 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Data;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
-using System.Web.Script.Serialization;
 using System.Windows.Forms;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
 
 namespace twitch_stream_check
@@ -38,6 +39,7 @@ namespace twitch_stream_check
         private System.Timers.Timer tBackgroundTimer; // background timer to call events
         private Logging Log; // use logging for exceptions
         
+        
         public SettingsForm()
         {
             //
@@ -46,9 +48,9 @@ namespace twitch_stream_check
             InitializeComponent();
             
             // try to hide the form on startup
-            this.WindowState = FormWindowState.Minimized;
-            this.Visible = false;
-            this.ShowInTaskbar = false;
+//            this.WindowState = FormWindowState.Minimized;
+//            this.Visible = false;
+//            this.ShowInTaskbar = false;
             this.Hide();
             
             // load error logging
@@ -98,7 +100,7 @@ namespace twitch_stream_check
             // FIXME RELEASE: Make sure to set checkinterval timer for release!
             // start timer with 1000ms * 60s * interval-minutes
             tBackgroundTimer.Interval = (settings.checkinterval * 60 * 1000);
-            tBackgroundTimer.Interval = 15000; // uncomment this for faster cycles on small entries
+//            tBackgroundTimer.Interval = 15000; // uncomment this for faster cycles on small entries
             // redo associated actions
             tBackgroundTimer.AutoReset = true;
             // set the action we want to do at the given interval
@@ -160,9 +162,9 @@ namespace twitch_stream_check
             
             // make sure we see a settings window which was previously hidden, hopefully...
             this.Show();
-            this.ShowInTaskbar = true;
-            this.Visible = true;
-            this.WindowState = FormWindowState.Normal;
+//            this.ShowInTaskbar = true;
+//            this.Visible = true;
+//            this.WindowState = FormWindowState.Normal;
             
             this.Focus();
         }
@@ -174,29 +176,35 @@ namespace twitch_stream_check
         /// <param name="e"></param>
         void ButtonSettingsOKClick(object sender, EventArgs e)
         {
+            // disable the button to avoid double save and reenable it at the end
+            Button bSender = sender as Button;
+            bSender.Enabled = false;
+            
             Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSOKCLICK: Button click - OK");
             // try to hide the settings window
-            this.WindowState = FormWindowState.Minimized;
-            this.Visible = false;
-            this.ShowInTaskbar = false;
+//            this.WindowState = FormWindowState.Minimized;
+//            this.Visible = false;
+//            this.ShowInTaskbar = false;
             this.Hide();
             
             Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSOKCLICK: Store the form field data into the settings");
             // get current settings from form and store them in the file
-            this.settings.checkinterval = convertNum(comboBoxInterval.Text, 1);
+            // check interval
+            this.settings.checkinterval = convertNum(comboBoxInterval.Text, 10);
             comboBoxInterval.Text = this.settings.checkinterval.ToString();
             tBackgroundTimer.Interval = this.settings.checkinterval * 60 * 1000;
             Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSOKCLICK: Set new interval to: " + tBackgroundTimer.Interval + " ms");
-                              
-            this.settings.checkusers = convertLFtoArray(convertAlphaNum(textBoxStreamers.Text, true));
-            textBoxStreamers.Text = convertArraytoLF(this.settings.checkusers);
-            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSOKCLICK: Set new streamlist to: " + textBoxStreamers.Text + " minutes");
             
+            // check account name
             this.settings.checkaccount = convertAlphaNum(textBoxAccountCheck.Text);
             textBoxAccountCheck.Text = this.settings.checkaccount;
             Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSOKCLICK: Set new Account to: " + textBoxAccountCheck.Text);
             
+            // check streams
+            
+            
             this.settings.Save();
+            bSender.Enabled = true;
         }
         /// <summary>
         /// Close the Settings menu without storing data
@@ -291,8 +299,47 @@ namespace twitch_stream_check
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "PUTSETTINGSINTOFORM: Get settings into the form fields");
             comboBoxInterval.Text = convertNum(settings.checkinterval.ToString()).ToString();
-            textBoxStreamers.Text = convertAlphaNum(convertArraytoLF(settings.checkusers), true);
             textBoxAccountCheck.Text = convertAlphaNum(this.settings.checkaccount);
+            
+            
+            try {
+                
+                Debug.WriteLineIf(GlobalVar.DEBUG, "PUTSETTINGSINTOFORM: Fill dsStream with settings");
+                // fill tables if not done yet
+                if (dsStreams.Tables.Count > 0)
+                {
+                    dsStreams.Tables.Clear();
+                }
+                dsStreams.Tables.Add(settings.checkusers);
+                dgvStreams.DataSource = settings.checkusers;
+//                dgvStreams.DataSource = settings.streams;
+                
+                dgvStreams.AutoGenerateColumns = false; // columns are set at designtime
+                dgvStreams.Refresh();
+//                ResizeColumns(); // set column width at designtime with streamnames Fill
+            } catch (Exception ex) {
+                Log.Add("getOnlineStatus>" + ex.Message);
+            }
+            
+        }
+        
+        /// <summary>
+        /// Resize columns to usefull needs but keep the possibility of user resize afterwards (will get reset after each new input)
+        /// Maybe not needed when Streamnames are set to Fill?
+        /// </summary>
+        private void ResizeColumns()
+        {
+            int iMax = dgvStreams.Columns.Count;
+            Debug.WriteLineIf(GlobalVar.DEBUG, "RESIZECOLUMNS: Columns: " + iMax);
+            int iWidth = 0;
+            // skip the first column as it should never change
+            for (int i = 1; i < iMax; i++) {
+                Debug.WriteLineIf(GlobalVar.DEBUG, "RESIZECOLUMNS: ColumnType[" + i + "]: " + dgvStreams.Columns[i].CellType);
+                dgvStreams.Columns[i].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+                iWidth = dgvStreams.Columns[i].Width;
+                dgvStreams.Columns[i].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                dgvStreams.Columns[i].Width = iWidth;
+            }
         }
         
         /// <summary>
@@ -369,7 +416,7 @@ namespace twitch_stream_check
                         sReturn = data.stream.game;
                     }
                 } catch (Exception ex) {
-                    Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Failed on Deserialize: " + ex.Message);
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "!EXCEPTION!:GETONLINESTATUS: Failed on Deserialize: " + ex.Message);
                     Log.Add("getOnlineStatus>" + ex.Message);
                 }
                 
@@ -577,7 +624,7 @@ namespace twitch_stream_check
         public void checkStreams()
         {
             // create a local copy of the current list of streams to avoid getting a mixup when changing settings, settings were used directly earlier
-            string[] aCheckUsers = settings.checkusers; // store a local copy of streamlist
+            string[] aCheckUsers = settings.checkusers2; // store a local copy of streamlist
             
             Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKSTREAMS: We gotta check our list of streams");
             if (!bGettingData) {
@@ -679,9 +726,57 @@ namespace twitch_stream_check
         /// </summary>
         class MySettings : AppSettings<MySettings>
         {
-            public string[] checkusers = {"Autositz", "DRUCKWELLETV", "Garrynewman", "Denkii"};
-            public int checkinterval = 1;
-            public string checkaccount = "Account";
+            public DataTable checkusers;
+            public string[] checkusers2;
+            public int checkinterval;
+            public string checkaccount;
+            public IList<twStream> streams;
+            
+            public MySettings()
+            {
+                checkinterval = 1;
+                checkaccount = "Account";
+                
+                // old settings
+                checkusers2 = new string[] {"Autositz", "DRUCKWELLETV", "Garrynewman", "Denkii"};
+                
+                // new settings
+                checkusers = new DataTable("Streams");
+                DataColumn dcImportant = new DataColumn();
+                dcImportant.DataType = Type.GetType("System.Boolean");
+                dcImportant.Caption = "!";
+                dcImportant.ColumnName = "bImportant";
+                dcImportant.DefaultValue = false;
+                DataColumn dcStream = new DataColumn();
+                dcStream.DataType = Type.GetType("System.String");
+                dcStream.Caption = "Stream names";
+                dcStream.ColumnName = "sStreamname";
+                dcStream.DefaultValue = "";
+                
+                checkusers.Columns.AddRange(new DataColumn[] {
+                                            dcImportant,
+                                            dcStream});
+                
+                // add default values
+                foreach (string s in checkusers2) {
+                    DataRow drTMP = checkusers.NewRow();
+                    drTMP["bImportant"] = true;
+                    drTMP["sStreamname"] = s;
+                    checkusers.Rows.Add(drTMP);
+                }
+                
+                // add default entries when list is empty
+                if (streams == null) {
+                    streams = new List<twStream>();
+                    foreach (string s in checkusers2) {
+                        twStream s2 = new twStream();
+                        s2.bImportant= true;
+                        s2.sStreamname = s;
+                        streams.Add(s2);
+                    }
+                }
+                
+            }
         }
         
         public int GetNthIndex(string sText, string sSearch, int iOccurred)
@@ -727,8 +822,12 @@ namespace twitch_stream_check
     /// </summary>
     public class AppSettings<T> where T : new()
     {
-        private const string DEFAULT_FILENAME = "settings.jsn";
+        private const string DEFAULT_FILENAME = "twitch-stream-check-settings.json";
         
+        public void Save(object obj)
+        {
+            File.WriteAllText("bla.json", JsonConvert.SerializeObject(obj));
+        }
         /// <summary>
         /// Store settings into file
         /// </summary>
@@ -736,7 +835,7 @@ namespace twitch_stream_check
         public void Save(string fileName = DEFAULT_FILENAME)
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGS:SAVE: Data save initialized - using self");
-            File.WriteAllText(fileName, (new JavaScriptSerializer()).Serialize(this));
+            File.WriteAllText(fileName, JsonConvert.SerializeObject(this));
         }
         
         /// <summary>
@@ -747,7 +846,7 @@ namespace twitch_stream_check
         public static void Save(T pSettings, string fileName = DEFAULT_FILENAME)
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGS:SAVE: Data save initialized - with given object");
-            File.WriteAllText(fileName, (new JavaScriptSerializer()).Serialize(pSettings));
+            File.WriteAllText(fileName, JsonConvert.SerializeObject(pSettings));
         }
         
         /// <summary>
@@ -757,12 +856,13 @@ namespace twitch_stream_check
         /// <returns>Returns the settings class with loaded settings</returns>
         public static T Load(string fileName = DEFAULT_FILENAME)
         {
+            // TODO: Check if loaded data matches current settings in datatypes?
             Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGS:LOAD: Data load initialized");
             T t = new T();
             try {
                 if (File.Exists(fileName)) {
                     Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGS:LOAD: Convert our loaded data into an useable object");
-                    t = (new JavaScriptSerializer()).Deserialize<T>(File.ReadAllText(fileName));
+                    t = JsonConvert.DeserializeObject<T>(File.ReadAllText(fileName));
                 }
             } catch (Exception ex) {
                 Debug.WriteLineIf(GlobalVar.DEBUG, "!EXCEPTION!:SETTINGS:LOAD: Something went wrong during load: " + ex.Message);
@@ -806,7 +906,49 @@ namespace twitch_stream_check
             }
         }
     }
-
+    
+    public class StreamSettings : AppSettings<StreamSettings>
+    {
+        public StreamSettings() { }
+        
+        public StreamSettings(string s)
+        {
+            bImportant = false;
+            sStream = s;
+        }
+        
+        public StreamSettings(bool b, string s)
+        {
+            bImportant = b;
+            sStream = s;
+        }
+    
+        // Properties. 
+        public bool bImportant { get; set; }
+        public string sStream { get; set; }
+    
+        public override string ToString()
+        {
+            if (bImportant)
+            {
+                return "!" + sStream;
+            } else {
+                return sStream;
+            }
+        }
+    }
+    
+    public class Settings : AppSettings<Settings>
+    {
+        public int interval { get; set; }
+        public string account { get; set; }
+        public Stream streams { get; set; }
+    }
+    public class twStream
+    {
+        public bool bImportant { get; set; }
+        public string sStreamname { get; set; }
+    }
     
     public static class GlobalVar
     {
