@@ -9,5 +9,5 @@ This tool will check Twitch streams in a given interval and report results.
 You can post requests, questions, bug reports [here](https://github.com/Autositz/twitch-stream-check/issues)
 
 You can reach Autositz on different ways:
-* [Comment on Steam profile](http://steamcommunity.com/id/autositz/)
-* [Twitter](http://twitter.com/Fruckley)
+* <a href="http://steamcommunity.com/id/autositz/" target="_blank">Comment on Steam profile</a>
+* <a href="http://twitter.com/Fruckley" target="_blank">Twitter</a>
