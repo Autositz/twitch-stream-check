@@ -101,7 +101,7 @@ namespace twitch_stream_check
             // FIXME RELEASE: Make sure to set checkinterval timer for release!
             // start timer with 1000ms * 60s * interval-minutes
             tBackgroundTimer.Interval = (settings.checkinterval * 60 * 1000);
-//            tBackgroundTimer.Interval = 15000; // uncomment this for faster cycles on small entries
+            tBackgroundTimer.Interval = 5000; // uncomment this for faster cycles on small entries
             // redo associated actions
             tBackgroundTimer.AutoReset = true;
             // set the action we want to do at the given interval
@@ -232,6 +232,13 @@ namespace twitch_stream_check
             //getAccountFollowings(textBoxAccountCheck.Text);
         }
         
+        
+        void ButtonSettingsAddStreamClick(object sender, EventArgs e)
+        {
+            settings.streams.Add(new twStream { });
+            dgvStreams.Refresh();
+        }
+        
         /// <summary>
         /// Convert the settings dialog data to settings save data.
         /// </summary>
@@ -302,17 +309,18 @@ namespace twitch_stream_check
             comboBoxInterval.Text = convertNum(settings.checkinterval.ToString()).ToString();
             textBoxAccountCheck.Text = convertAlphaNum(this.settings.checkaccount);
             
-            
+            // FIXME: Missing new line and Add button not working
             try {
                 
                 Debug.WriteLineIf(GlobalVar.DEBUG, "PUTSETTINGSINTOFORM: Fill dsStream with settings");
                 // fill tables if not done yet
-                if (dsStreams.Tables.Count > 0)
-                {
-                    dsStreams.Tables.Clear();
-                }
+//                if (dsStreams.Tables.Count > 0)
+//                {
+//                    dsStreams.Tables.Clear();
+//                }
 //                dsStreams.Tables.Add(settings.checkusers);
 //                dgvStreams.DataSource = settings.checkusers;
+                
                 dgvStreams.DataSource = settings.streams;
                 
                 dgvStreams.AutoGenerateColumns = false; // columns are set at designtime
@@ -390,7 +398,7 @@ namespace twitch_stream_check
             
             string sURL = sBaseURL + sAccount + sParams;
             Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Created URL: " + sURL);
-            if (doWebRequest(sURL)) {
+            if (sAccount != "" && doWebRequest(sURL)) {
                 Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Parsing WebResponse");
                 try {
                     using (Stream stream = HttpWResp.GetResponseStream()) {
@@ -475,7 +483,7 @@ namespace twitch_stream_check
             
             // -1 means we have no matching menu entry and will add a new one, otherwise do nothing
             if (iMenuIDX == -1) {
-                notifyIcon1.ShowBalloonTip(900, "Stream is LIVE", sUser + " playing " + sGame, ToolTipIcon.None);
+//                notifyIcon1.ShowBalloonTip(900, "Stream is LIVE", sUser + " playing " + sGame, ToolTipIcon.None);
 
                 // add the new stream on top of the menu and append the other entries back to the menu
                 // make sure to add name to be able to search by key!
@@ -484,7 +492,12 @@ namespace twitch_stream_check
                 Debug.WriteLineIf(GlobalVar.DEBUG, "CREATEMENUENTRY: Created new MenuItem");
                 // add the new stream on top of the menu
                 try {
-                    MyMenu.Items.Insert(0, tsiNewItem);
+                    MyMenu.Invoke((MethodInvoker) delegate {
+                                      lock (MyMenu) {
+                                          MyMenu.Items.Insert(0, tsiNewItem);
+                                      }
+                                  });
+//                    MyMenu.Items.Insert(0, tsiNewItem);
                     bRet = true;
                     // increase active streams number only when we are really adding a new one
                     iActiveStreams++;
@@ -513,21 +526,26 @@ namespace twitch_stream_check
                 Debug.WriteLineIf(GlobalVar.DEBUG, "REMOVEMENUENTRY: NEEDS INVOKE");
                 return (bool)this.Invoke ((Func<string,bool>)removeMenuEntry, sUser);
             }
-            
+            MyMenu.Show(1, 2);
             Debug.WriteLineIf(GlobalVar.DEBUG, "removeMenuEntry: Remove menu entry for stream: " + sUser);
             bool bRet = false;
-            int iMenuIDX = MyMenu.Items.IndexOfKey(sUser);
-            Debug.WriteLineIf(GlobalVar.DEBUG, "removeMenuEntry: Menu index: " + iMenuIDX);
-            
-            
-            if (iMenuIDX != -1) {
-                Debug.WriteLineIf(GlobalVar.DEBUG, "removeMenuEntry: Entry found at: " + iMenuIDX);
-                notifyIcon1.ShowBalloonTip(750, "Stream is Offline", sUser, ToolTipIcon.Info);
-                MyMenu.Items.RemoveAt(iMenuIDX);
-                bRet = true;
-                // decrease active streams number only when we are really removing an entry
-                iActiveStreams--;
-            }
+            MyMenu.Invoke((MethodInvoker) delegate {
+                              lock (MyMenu) {
+                                  int iMenuIDX = MyMenu.Items.IndexOfKey(sUser);
+                                  Debug.WriteLineIf(GlobalVar.DEBUG, "removeMenuEntry: Menu index: " + iMenuIDX);
+                                  
+                                  
+                                  if (iMenuIDX != -1) {
+                                      Debug.WriteLineIf(GlobalVar.DEBUG, "removeMenuEntry: Entry found at: " + iMenuIDX);
+//                                      notifyIcon1.ShowBalloonTip(750, "Stream is Offline", sUser, ToolTipIcon.Info);
+                                                            MyMenu.Items.RemoveAt(iMenuIDX);
+//                                      MyMenu.Items.RemoveAt(iMenuIDX);
+                                      bRet = true;
+                                      // decrease active streams number only when we are really removing an entry
+                                      iActiveStreams--;
+                                  }
+                              }
+                          });
             
             
             Debug.WriteLineIf(GlobalVar.DEBUG, "REMOVEMENUENTRY: END");
@@ -539,12 +557,15 @@ namespace twitch_stream_check
             if (this.InvokeRequired)
                 return (bool)this.Invoke ((Func<bool>)updateToolTip);
             
+            string s = "";
             // display info when we are currently running an update
             if (bGettingData) {
-                notifyIcon1.Text = iActiveStreams + " active Streams (Updating " + iCurrentCheck + "/" + iMaxCheck + ")";
+                s = iActiveStreams + " active Streams (Updating " + iCurrentCheck + "/" + iMaxCheck + ")";
             } else {
-                notifyIcon1.Text = iActiveStreams + " active Streams";
+                s = iActiveStreams + " active Streams";
             }
+            notifyIcon1.Text = s;
+//            MyMenu.Invoke((MethodInvoker) delegate {notifyIcon1.Text = s;});
             
             return true;
         }
@@ -589,7 +610,7 @@ namespace twitch_stream_check
         public bool checkUser(string sUser)
         {
             bool bActive = false;
-            Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKUSER: We lookup a user");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKUSER: We lookup a user: " + sUser);
             //notifyIcon1.ShowBalloonTip(1500, "Checking user", sUser, ToolTipIcon.Info);
             string sGame = getOnlineStatus(sUser);
             Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKUSER: We lookuped a user");
@@ -625,18 +646,18 @@ namespace twitch_stream_check
         public void checkStreams()
         {
             // create a local copy of the current list of streams to avoid getting a mixup when changing settings, settings were used directly earlier
-            string[] aCheckUsers = settings.checkusers2; // store a local copy of streamlist
+            IList<twStream> aCheckUsers = settings.streams; // store a local copy of streamlist
             
             Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKSTREAMS: We gotta check our list of streams");
             if (!bGettingData) {
                 bGettingData = true;
                 
                 // set maxcheck for progress display
-                iMaxCheck = aCheckUsers.Length;
+                iMaxCheck = aCheckUsers.Count;
                 try {
                     for (int i = 0; i < iMaxCheck; i++) {
                         iCurrentCheck = i + 1;
-                        checkUser(aCheckUsers[i]);
+                        checkUser(aCheckUsers[i].sStreamname);
                     }
                 } catch (Exception ex) {
                     // user index could be out of bounds
@@ -736,7 +757,8 @@ namespace twitch_stream_check
             
             // add default entries when list is empty
             if (settings.streams == null) {
-                string[] streamers = new string[] {"Autositz", "DRUCKWELLETV", "Garrynewman", "Denkii"};
+//                string[] streamers = new string[] {"Autositz", "DRUCKWELLETV", "Garrynewman", "Denkii"};
+                string[] streamers = new string[] {"Entry 1", "Entry 2", "Entry 3", "Entry 4"};
                 settings.streams = new List<twStream>();
                 foreach (string s in streamers) {
                     twStream s2 = new twStream();
@@ -754,7 +776,7 @@ namespace twitch_stream_check
         class MySettings : AppSettings<MySettings>
         {
 //            public DataTable checkusers;
-            public string[] checkusers2;
+//            public string[] checkusers2;
             public int checkinterval;
             public string checkaccount;
             public IList<twStream> streams;
@@ -940,49 +962,24 @@ namespace twitch_stream_check
         }
     }
     
-    public class StreamSettings : AppSettings<StreamSettings>
-    {
-        public StreamSettings() { }
-        
-        public StreamSettings(string s)
-        {
-            bImportant = false;
-            sStream = s;
-        }
-        
-        public StreamSettings(bool b, string s)
-        {
-            bImportant = b;
-            sStream = s;
-        }
-    
-        // Properties. 
-        public bool bImportant { get; set; }
-        public string sStream { get; set; }
-    
-        public override string ToString()
-        {
-            if (bImportant)
-            {
-                return "!" + sStream;
-            } else {
-                return sStream;
-            }
-        }
-    }
-    
-    public class Settings : AppSettings<Settings>
-    {
-        public int interval { get; set; }
-        public string account { get; set; }
-        public Stream streams { get; set; }
-    }
+    /// <summary>
+    /// Class for each single stream entry
+    /// </summary>
     public class twStream
     {
         public bool bImportant { get; set; }
         public string sStreamname { get; set; }
+        
+        public twStream()
+        {
+            bImportant = false;
+            sStreamname = "";
+        }
     }
     
+    /// <summary>
+    /// Holds static global variables
+    /// </summary>
     public static class GlobalVar
     {
         public const bool DEBUG = true; // enable or disable debug messages

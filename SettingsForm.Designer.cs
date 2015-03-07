@@ -33,6 +33,7 @@ namespace twitch_stream_check
         private System.Data.DataSet dsStreams;
         private System.Windows.Forms.DataGridViewCheckBoxColumn bImportant;
         private System.Windows.Forms.DataGridViewTextBoxColumn sStream;
+        private System.Windows.Forms.Button buttonSettingsAddStream;
         
         /// <summary>
         /// Disposes resources used by the form.
@@ -76,6 +77,7 @@ namespace twitch_stream_check
             this.bImportant = new System.Windows.Forms.DataGridViewCheckBoxColumn();
             this.sStream = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dsStreams = new System.Data.DataSet();
+            this.buttonSettingsAddStream = new System.Windows.Forms.Button();
             this.MyMenu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvStreams)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dsStreams)).BeginInit();
@@ -96,17 +98,17 @@ namespace twitch_stream_check
             this.aboutToolStripMenuItem,
             this.exitToolStripMenuItem});
             this.MyMenu.Name = "notifyIconMenu";
-            this.MyMenu.Size = new System.Drawing.Size(117, 76);
+            this.MyMenu.Size = new System.Drawing.Size(153, 98);
             // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(113, 6);
+            this.toolStripSeparator1.Size = new System.Drawing.Size(149, 6);
             // 
             // toolStripMenuItem1
             // 
             this.toolStripMenuItem1.Name = "toolStripMenuItem1";
-            this.toolStripMenuItem1.Size = new System.Drawing.Size(116, 22);
+            this.toolStripMenuItem1.Size = new System.Drawing.Size(152, 22);
             this.toolStripMenuItem1.Text = "Settings";
             this.toolStripMenuItem1.ToolTipText = "Configure program behavior";
             this.toolStripMenuItem1.Click += new System.EventHandler(this.SettingsToolStripMenuItem1Click);
@@ -114,7 +116,7 @@ namespace twitch_stream_check
             // aboutToolStripMenuItem
             // 
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(116, 22);
+            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.aboutToolStripMenuItem.Text = "About";
             this.aboutToolStripMenuItem.ToolTipText = "Tell me more";
             this.aboutToolStripMenuItem.Click += new System.EventHandler(this.AboutToolStripMenuItemClick);
@@ -122,7 +124,7 @@ namespace twitch_stream_check
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(116, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.exitToolStripMenuItem.Text = "Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.ExitToolStripMenuItemClick);
             // 
@@ -133,7 +135,7 @@ namespace twitch_stream_check
             this.label1.Size = new System.Drawing.Size(232, 71);
             this.label1.TabIndex = 1;
             this.label1.Text = "Enter twitch usernames you wish to check\r\n! = Important stream will be checked mo" +
-    "re often\r\n\r\n";
+    "re often\r\n(not implemented yet)";
             // 
             // buttonSettingsGetUsers
             // 
@@ -236,16 +238,16 @@ namespace twitch_stream_check
             // 
             this.dgvStreams.AllowUserToResizeColumns = false;
             this.dgvStreams.AllowUserToResizeRows = false;
-            this.dgvStreams.AutoGenerateColumns = false;
             this.dgvStreams.AutoSizeRowsMode = System.Windows.Forms.DataGridViewAutoSizeRowsMode.AllCells;
             this.dgvStreams.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dgvStreams.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.bImportant,
             this.sStream});
-            this.dgvStreams.DataSource = this.dsStreams;
             this.dgvStreams.Location = new System.Drawing.Point(13, 130);
+            this.dgvStreams.MultiSelect = false;
             this.dgvStreams.Name = "dgvStreams";
             this.dgvStreams.RowHeadersVisible = false;
+            this.dgvStreams.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect;
             this.dgvStreams.Size = new System.Drawing.Size(305, 183);
             this.dgvStreams.TabIndex = 11;
             // 
@@ -275,12 +277,25 @@ namespace twitch_stream_check
             // 
             this.dsStreams.DataSetName = "NewDataSet";
             // 
+            // buttonSettingsAddStream
+            // 
+            this.buttonSettingsAddStream.AutoSize = true;
+            this.buttonSettingsAddStream.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.buttonSettingsAddStream.Location = new System.Drawing.Point(13, 103);
+            this.buttonSettingsAddStream.Name = "buttonSettingsAddStream";
+            this.buttonSettingsAddStream.Size = new System.Drawing.Size(72, 23);
+            this.buttonSettingsAddStream.TabIndex = 12;
+            this.buttonSettingsAddStream.Text = "Add Stream";
+            this.buttonSettingsAddStream.UseVisualStyleBackColor = true;
+            this.buttonSettingsAddStream.Click += new System.EventHandler(this.ButtonSettingsAddStreamClick);
+            // 
             // SettingsForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.buttonSettingsCANCEL;
             this.ClientSize = new System.Drawing.Size(684, 434);
+            this.Controls.Add(this.buttonSettingsAddStream);
             this.Controls.Add(this.dgvStreams);
             this.Controls.Add(this.linkLabelFeedback);
             this.Controls.Add(this.buttonSettingsCANCEL);
