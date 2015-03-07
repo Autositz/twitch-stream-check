@@ -55,8 +55,9 @@ namespace twitch_stream_check
             
             // load error logging
             this.Log = new Logging();
-            // load stored settings from file
+            // load stored settings from file and check if default values need to be put in
             this.settings = MySettings.Load();
+            putDefaultSettings();
             // set the check value if a check is currently running
             bGettingData = false;
             iCurrentCheck = 0;
@@ -310,9 +311,9 @@ namespace twitch_stream_check
                 {
                     dsStreams.Tables.Clear();
                 }
-                dsStreams.Tables.Add(settings.checkusers);
-                dgvStreams.DataSource = settings.checkusers;
-//                dgvStreams.DataSource = settings.streams;
+//                dsStreams.Tables.Add(settings.checkusers);
+//                dgvStreams.DataSource = settings.checkusers;
+                dgvStreams.DataSource = settings.streams;
                 
                 dgvStreams.AutoGenerateColumns = false; // columns are set at designtime
                 dgvStreams.Refresh();
@@ -721,12 +722,38 @@ namespace twitch_stream_check
         }
         
         
+        public void putDefaultSettings()
+        {
+            // population of default data moved to putDefaultSettings() to avoid getting extra List entries on Load
+            
+            if (settings.checkinterval == 0 || settings.checkinterval < 1) {
+                settings.checkinterval = 5;
+            }
+            
+            if (settings.checkaccount == null) {
+                settings.checkaccount = "Account";
+            }
+            
+            // add default entries when list is empty
+            if (settings.streams == null) {
+                string[] streamers = new string[] {"Autositz", "DRUCKWELLETV", "Garrynewman", "Denkii"};
+                settings.streams = new List<twStream>();
+                foreach (string s in streamers) {
+                    twStream s2 = new twStream();
+                    s2.bImportant= true;
+                    s2.sStreamname = s;
+                    settings.streams.Add(s2);
+                }
+            }
+            
+        }
+        
         /// <summary>
         /// Settings definition
         /// </summary>
         class MySettings : AppSettings<MySettings>
         {
-            public DataTable checkusers;
+//            public DataTable checkusers;
             public string[] checkusers2;
             public int checkinterval;
             public string checkaccount;
@@ -734,6 +761,9 @@ namespace twitch_stream_check
             
             public MySettings()
             {
+                // population of default data moved to putDefaultSettings() to avoid getting extra List entries on Load
+                
+#if _OLDDEFAULT
                 checkinterval = 1;
                 checkaccount = "Account";
                 
@@ -741,29 +771,31 @@ namespace twitch_stream_check
                 checkusers2 = new string[] {"Autositz", "DRUCKWELLETV", "Garrynewman", "Denkii"};
                 
                 // new settings
-                checkusers = new DataTable("Streams");
-                DataColumn dcImportant = new DataColumn();
-                dcImportant.DataType = Type.GetType("System.Boolean");
-                dcImportant.Caption = "!";
-                dcImportant.ColumnName = "bImportant";
-                dcImportant.DefaultValue = false;
-                DataColumn dcStream = new DataColumn();
-                dcStream.DataType = Type.GetType("System.String");
-                dcStream.Caption = "Stream names";
-                dcStream.ColumnName = "sStreamname";
-                dcStream.DefaultValue = "";
-                
-                checkusers.Columns.AddRange(new DataColumn[] {
-                                            dcImportant,
-                                            dcStream});
-                
-                // add default values
-                foreach (string s in checkusers2) {
-                    DataRow drTMP = checkusers.NewRow();
-                    drTMP["bImportant"] = true;
-                    drTMP["sStreamname"] = s;
-                    checkusers.Rows.Add(drTMP);
-                }
+//                checkusers = new DataTable("Streams");
+//                DataColumn dcImportant = new DataColumn();
+//                dcImportant.DataType = Type.GetType("System.Boolean");
+//                dcImportant.Caption = "!";
+//                dcImportant.ColumnName = "bImportant";
+//                dcImportant.DefaultValue = false;
+//                DataColumn dcStream = new DataColumn();
+//                dcStream.DataType = Type.GetType("System.String");
+//                dcStream.Caption = "Stream names";
+//                dcStream.ColumnName = "sStreamname";
+//                dcStream.DefaultValue = "";
+//                
+//                checkusers.Columns.AddRange(new DataColumn[] {
+//                                            dcImportant,
+//                                            dcStream});
+//                
+//                // add default values
+//                if (checkusers.Rows.Count < 1) {
+//                    foreach (string s in checkusers2) {
+//                        DataRow drTMP = checkusers.NewRow();
+//                        drTMP["bImportant"] = true;
+//                        drTMP["sStreamname"] = s;
+//                        checkusers.Rows.Add(drTMP);
+//                    }
+//                }
                 
                 // add default entries when list is empty
                 if (streams == null) {
@@ -776,6 +808,7 @@ namespace twitch_stream_check
                     }
                 }
                 
+#endif
             }
         }
         
