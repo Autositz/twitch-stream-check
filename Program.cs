@@ -20,8 +20,6 @@ namespace twitch_stream_check
     internal sealed class Program
     {
         static Mutex mRunning;
-        public static Form objMyForm; // dummy form testing
-        public static Label objMyLabel; // dummy form testing
         
         /// <summary>
         /// Program entry point.
@@ -54,21 +52,6 @@ namespace twitch_stream_check
                 // this has to be one of the earliest things...
                 AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
                 
-//                objMyLabel = new Label();
-//                objMyLabel.Size = new System.Drawing.Size(800, 600);
-//                objMyLabel.AutoSize = true;
-//                objMyLabel.BorderStyle = BorderStyle.FixedSingle;
-//                objMyLabel.Text = "INFO";
-//                objMyLabel.Visible = true;
-//                objMyLabel.Show();
-//                objMyLabel.BringToFront();
-//                
-//                objMyForm = new Form();
-//                objMyForm.SuspendLayout();
-//                objMyForm.Controls.Add(objMyLabel);
-//                objMyForm.ResumeLayout();
-//                objMyForm.PerformLayout();
-//                objMyForm.Show();
                 
                 
                 System.Timers.Timer tMainTimer = new System.Timers.Timer();

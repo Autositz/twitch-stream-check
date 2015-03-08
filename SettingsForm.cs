@@ -48,9 +48,6 @@ namespace twitch_stream_check
             InitializeComponent();
             
             // try to hide the form on startup
-//            this.WindowState = FormWindowState.Minimized;
-//            this.Visible = false;
-//            this.ShowInTaskbar = false;
             this.Hide();
             
             // load error logging
@@ -76,7 +73,7 @@ namespace twitch_stream_check
             
             int i;
             // create clickable feedback links
-            linkLabelFeedback.Text = "Send Feedback via eMail\r\nSend Feedback via Steam";
+//            linkLabelFeedback.Text = "Send Feedback via eMail\r\nSend Feedback via Steam";
             // get 2nd occurance of Send Feedback to avoid counting it over and over again
             i = linkLabelFeedback.Text.IndexOf("Send Feedback");
             Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGSFORM: Send Feedback 1 located at: " + i);
@@ -101,7 +98,7 @@ namespace twitch_stream_check
             // FIXME RELEASE: Make sure to set checkinterval timer for release!
             // start timer with 1000ms * 60s * interval-minutes
             tBackgroundTimer.Interval = (settings.checkinterval * 60 * 1000);
-            tBackgroundTimer.Interval = 5000; // uncomment this for faster cycles on small entries
+//            tBackgroundTimer.Interval = 5000; // uncomment this for faster cycles on small entries
             // redo associated actions
             tBackgroundTimer.AutoReset = true;
             // set the action we want to do at the given interval
@@ -118,7 +115,7 @@ namespace twitch_stream_check
         /// </summary>
         void doTimer(object sender, EventArgs e)
         {
-            Debug.WriteLineIf(GlobalVar.DEBUG, "STARTCHECKS: Timer called us");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "DOTIMER: Timer called us");
             Task.Factory.StartNew(checkStreams);
             
         }
@@ -128,12 +125,12 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void ExitToolStripMenuItemClick(object sender, EventArgs e)
+        void ToolStripMenuItemClickExit(object sender, EventArgs e)
         {
-            Debug.WriteLineIf(GlobalVar.DEBUG, "EXITTOOLSTRIPMENUITEMCLICK: Menu Click - Exit");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "TOOLSTRIPMENUITEMCLICKEXIT: Menu Click - Exit");
             if (HttpWResp != null) {
                 HttpWResp.Close();
-                Debug.WriteLineIf(GlobalVar.DEBUG, "EXITTOOLSTRIPMENUITEMCLICK: WebResponse closed");
+                Debug.WriteLineIf(GlobalVar.DEBUG, "TOOLSTRIPMENUITEMCLICKEXIT: WebResponse closed");
             }
                 
             Application.Exit();
@@ -144,9 +141,9 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void AboutToolStripMenuItemClick(object sender, EventArgs e)
+        void ToolStripMenuItemClickAbout(object sender, EventArgs e)
         {
-            Debug.WriteLineIf(GlobalVar.DEBUG, "ABOUTTOOLSTRIPMENUITEMCLICK: Menu Click - About");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "TOOLSTRIPMENUITEMCLICKABOUT: Menu Click - About");
             MessageBox.Show("This tool will check if any of the configured streams is currently online.", "Twitch Stream Checker");
         }
         
@@ -155,18 +152,14 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void SettingsToolStripMenuItem1Click(object sender, EventArgs e)
+        void ToolStripMenuItemClickSettings(object sender, EventArgs e)
         {
-            Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGSTOOLSTRIPMENUITEM1CLICK: Menu Click - Settings");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "TOOLSTRIPMENUITEMCLICKSETTINGS: Menu Click - Settings");
             // populate settings form with currently store data
             putSettingsIntoForm();
             
             // make sure we see a settings window which was previously hidden, hopefully...
             this.Show();
-//            this.ShowInTaskbar = true;
-//            this.Visible = true;
-//            this.WindowState = FormWindowState.Normal;
-            
             this.Focus();
         }
         
@@ -175,31 +168,28 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void ButtonSettingsOKClick(object sender, EventArgs e)
+        void ButtonSettingsClickSAVE(object sender, EventArgs e)
         {
             // disable the button to avoid double save and reenable it at the end
             Button bSender = sender as Button;
             bSender.Enabled = false;
             
-            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSOKCLICK: Button click - OK");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCLICKSAVE: Button click - OK");
             // try to hide the settings window
-//            this.WindowState = FormWindowState.Minimized;
-//            this.Visible = false;
-//            this.ShowInTaskbar = false;
             this.Hide();
             
-            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSOKCLICK: Store the form field data into the settings");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCLICKSAVE: Store the form field data into the settings");
             // get current settings from form and store them in the file
             // check interval
             this.settings.checkinterval = convertNum(comboBoxInterval.Text, 10);
             comboBoxInterval.Text = this.settings.checkinterval.ToString();
             tBackgroundTimer.Interval = this.settings.checkinterval * 60 * 1000;
-            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSOKCLICK: Set new interval to: " + tBackgroundTimer.Interval + " ms");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCLICKSAVE: Set new interval to: " + tBackgroundTimer.Interval + " ms");
             
             // check account name
             this.settings.checkaccount = convertAlphaNum(textBoxAccountCheck.Text);
             textBoxAccountCheck.Text = this.settings.checkaccount;
-            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSOKCLICK: Set new Account to: " + textBoxAccountCheck.Text);
+            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCLICKSAVE: Set new Account to: " + textBoxAccountCheck.Text);
             
             // check streams
             
@@ -212,9 +202,9 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void ButtonSettingsCANCELClick(object sender, EventArgs e)
+        void ButtonSettingsClickCANCEL(object sender, EventArgs e)
         {
-            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCANCELCLICK: Button click - Cancel");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCLICKCANCEL: Button click - Cancel");
             this.Visible = false;
         }
         
@@ -223,20 +213,13 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void ButtonSettingsGetUsersClick(object sender, EventArgs e)
+        void ButtonSettingsClickGetUsers(object sender, EventArgs e)
         {
-            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSGETUSERSCLICK: Button click - Get streams a user is following - got auth token?");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCLICKGETUSERS: Button click - Get streams a user is following - got auth token?");
             // TODO: Implement ButtonSettingsGetUsersClick, requires token, add field for token and gettoken url to twitch, no default token, check if user and token create correct answer
             MessageBox.Show("Not available right now.", "Channels following");
             return;
             //getAccountFollowings(textBoxAccountCheck.Text);
-        }
-        
-        
-        void ButtonSettingsAddStreamClick(object sender, EventArgs e)
-        {
-            settings.streams.Add(new twStream { });
-            dgvStreams.Refresh();
         }
         
         /// <summary>
@@ -312,20 +295,12 @@ namespace twitch_stream_check
             // FIXME: Missing new line and Add button not working
             try {
                 
-                Debug.WriteLineIf(GlobalVar.DEBUG, "PUTSETTINGSINTOFORM: Fill dsStream with settings");
-                // fill tables if not done yet
-//                if (dsStreams.Tables.Count > 0)
-//                {
-//                    dsStreams.Tables.Clear();
-//                }
-//                dsStreams.Tables.Add(settings.checkusers);
-//                dgvStreams.DataSource = settings.checkusers;
-                
-                dgvStreams.DataSource = settings.streams;
+                Debug.WriteLineIf(GlobalVar.DEBUG, "PUTSETTINGSINTOFORM: Fill bsStream and dgvStreams with settings");
+                bsStreams.DataSource = settings.streams;
+                dgvStreams.DataSource = bsStreams; // rebind DataSource to make sure it is bound.. designer shows it bound but does not when this point in code is reached...
                 
                 dgvStreams.AutoGenerateColumns = false; // columns are set at designtime
                 dgvStreams.Refresh();
-//                ResizeColumns(); // set column width at designtime with streamnames Fill
             } catch (Exception ex) {
                 Log.Add("getOnlineStatus>" + ex.Message);
             }
@@ -526,7 +501,7 @@ namespace twitch_stream_check
                 Debug.WriteLineIf(GlobalVar.DEBUG, "REMOVEMENUENTRY: NEEDS INVOKE");
                 return (bool)this.Invoke ((Func<string,bool>)removeMenuEntry, sUser);
             }
-            MyMenu.Show(1, 2);
+            
             Debug.WriteLineIf(GlobalVar.DEBUG, "removeMenuEntry: Remove menu entry for stream: " + sUser);
             bool bRet = false;
             MyMenu.Invoke((MethodInvoker) delegate {
