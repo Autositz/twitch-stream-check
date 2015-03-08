@@ -20,8 +20,6 @@ namespace twitch_stream_check
     internal sealed class Program
     {
         static Mutex mRunning;
-        public static Form objMyForm; // dummy form
-        public static Label objMyLabel; // dummy form
         
         /// <summary>
         /// Program entry point.
@@ -50,21 +48,10 @@ namespace twitch_stream_check
                 MessageBox.Show("Program is already running.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1);
             } else {
                 
-//                objMyLabel = new Label();
-//                objMyLabel.Size = new System.Drawing.Size(800, 600);
-//                objMyLabel.AutoSize = true;
-//                objMyLabel.BorderStyle = BorderStyle.FixedSingle;
-//                objMyLabel.Text = "INFO";
-//                objMyLabel.Visible = true;
-//                objMyLabel.Show();
-//                objMyLabel.BringToFront();
-//                
-//                objMyForm = new Form();
-//                objMyForm.SuspendLayout();
-//                objMyForm.Controls.Add(objMyLabel);
-//                objMyForm.ResumeLayout();
-//                objMyForm.PerformLayout();
-//                objMyForm.Show();
+                // if we do not have our JSON.NET .dll we gotta use the embedded one
+                // this has to be one of the earliest things...
+                AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
+                
                 
                 
                 System.Timers.Timer tMainTimer = new System.Timers.Timer();
@@ -77,9 +64,6 @@ namespace twitch_stream_check
                 tMainTimer.Enabled = true; // enable timer
                 // prevent form from being displayed at startup
                 SettingsForm objSettingsForm = new SettingsForm();
-                
-                // if we do not have our JSON.NET .dll we gotta use the embedded one
-                AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
                 
                 Application.Run();
                 

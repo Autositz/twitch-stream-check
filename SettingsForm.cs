@@ -12,13 +12,15 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Drawing;
+using System.Data;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
-using System.Web.Script.Serialization;
 using System.Windows.Forms;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
 
 namespace twitch_stream_check
@@ -38,6 +40,7 @@ namespace twitch_stream_check
         private System.Timers.Timer tBackgroundTimer; // background timer to call events
         private Logging Log; // use logging for exceptions
         
+        
         public SettingsForm()
         {
             //
@@ -46,15 +49,13 @@ namespace twitch_stream_check
             InitializeComponent();
             
             // try to hide the form on startup
-            this.WindowState = FormWindowState.Minimized;
-            this.Visible = false;
-            this.ShowInTaskbar = false;
             this.Hide();
             
             // load error logging
             this.Log = new Logging();
-            // load stored settings from file
+            // load stored settings from file and check if default values need to be put in
             this.settings = MySettings.Load();
+            putDefaultSettings();
             // set the check value if a check is currently running
             bGettingData = false;
             iCurrentCheck = 0;
@@ -73,7 +74,7 @@ namespace twitch_stream_check
             
             int i;
             // create clickable feedback links
-            linkLabelFeedback.Text = "Send Feedback via eMail\r\nSend Feedback via Steam";
+//            linkLabelFeedback.Text = "Send Feedback via eMail\r\nSend Feedback via Steam";
             // get 2nd occurance of Send Feedback to avoid counting it over and over again
             i = linkLabelFeedback.Text.IndexOf("Send Feedback");
             Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGSFORM: Send Feedback 1 located at: " + i);
@@ -98,7 +99,7 @@ namespace twitch_stream_check
             // FIXME RELEASE: Make sure to set checkinterval timer for release!
             // start timer with 1000ms * 60s * interval-minutes
             tBackgroundTimer.Interval = (settings.checkinterval * 60 * 1000);
-            tBackgroundTimer.Interval = 15000; // uncomment this for faster cycles on small entries
+//            tBackgroundTimer.Interval = 5000; // uncomment this for faster cycles on small entries
             // redo associated actions
             tBackgroundTimer.AutoReset = true;
             // set the action we want to do at the given interval
@@ -115,7 +116,7 @@ namespace twitch_stream_check
         /// </summary>
         void doTimer(object sender, EventArgs e)
         {
-            Debug.WriteLineIf(GlobalVar.DEBUG, "STARTCHECKS: Timer called us");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "DOTIMER: Timer called us");
             Task.Factory.StartNew(checkStreams);
             
         }
@@ -125,12 +126,12 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void ExitToolStripMenuItemClick(object sender, EventArgs e)
+        void ToolStripMenuItemClickExit(object sender, EventArgs e)
         {
-            Debug.WriteLineIf(GlobalVar.DEBUG, "EXITTOOLSTRIPMENUITEMCLICK: Menu Click - Exit");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "TOOLSTRIPMENUITEMCLICKEXIT: Menu Click - Exit");
             if (HttpWResp != null) {
                 HttpWResp.Close();
-                Debug.WriteLineIf(GlobalVar.DEBUG, "EXITTOOLSTRIPMENUITEMCLICK: WebResponse closed");
+                Debug.WriteLineIf(GlobalVar.DEBUG, "TOOLSTRIPMENUITEMCLICKEXIT: WebResponse closed");
             }
                 
             Application.Exit();
@@ -141,9 +142,9 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void AboutToolStripMenuItemClick(object sender, EventArgs e)
+        void ToolStripMenuItemClickAbout(object sender, EventArgs e)
         {
-            Debug.WriteLineIf(GlobalVar.DEBUG, "ABOUTTOOLSTRIPMENUITEMCLICK: Menu Click - About");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "TOOLSTRIPMENUITEMCLICKABOUT: Menu Click - About");
             MessageBox.Show("This tool will check if any of the configured streams is currently online.", "Twitch Stream Checker");
         }
         
@@ -152,18 +153,14 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void SettingsToolStripMenuItem1Click(object sender, EventArgs e)
+        void ToolStripMenuItemClickSettings(object sender, EventArgs e)
         {
-            Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGSTOOLSTRIPMENUITEM1CLICK: Menu Click - Settings");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "TOOLSTRIPMENUITEMCLICKSETTINGS: Menu Click - Settings");
             // populate settings form with currently store data
             putSettingsIntoForm();
             
             // make sure we see a settings window which was previously hidden, hopefully...
             this.Show();
-            this.ShowInTaskbar = true;
-            this.Visible = true;
-            this.WindowState = FormWindowState.Normal;
-            
             this.Focus();
         }
         
@@ -172,40 +169,43 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void ButtonSettingsOKClick(object sender, EventArgs e)
+        void ButtonSettingsClickSAVE(object sender, EventArgs e)
         {
-            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSOKCLICK: Button click - OK");
+            // disable the button to avoid double save and reenable it at the end
+            Button bSender = sender as Button;
+            bSender.Enabled = false;
+            
+            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCLICKSAVE: Button click - OK");
             // try to hide the settings window
-            this.WindowState = FormWindowState.Minimized;
-            this.Visible = false;
-            this.ShowInTaskbar = false;
             this.Hide();
             
-            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSOKCLICK: Store the form field data into the settings");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCLICKSAVE: Store the form field data into the settings");
             // get current settings from form and store them in the file
-            this.settings.checkinterval = convertNum(comboBoxInterval.Text, 1);
+            // check interval
+            this.settings.checkinterval = convertNum(comboBoxInterval.Text, 10);
             comboBoxInterval.Text = this.settings.checkinterval.ToString();
             tBackgroundTimer.Interval = this.settings.checkinterval * 60 * 1000;
-            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSOKCLICK: Set new interval to: " + tBackgroundTimer.Interval + " ms");
-                              
-            this.settings.checkusers = convertLFtoArray(convertAlphaNum(textBoxStreamers.Text, true));
-            textBoxStreamers.Text = convertArraytoLF(this.settings.checkusers);
-            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSOKCLICK: Set new streamlist to: " + textBoxStreamers.Text + " minutes");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCLICKSAVE: Set new interval to: " + tBackgroundTimer.Interval + " ms");
             
+            // check account name
             this.settings.checkaccount = convertAlphaNum(textBoxAccountCheck.Text);
             textBoxAccountCheck.Text = this.settings.checkaccount;
-            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSOKCLICK: Set new Account to: " + textBoxAccountCheck.Text);
+            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCLICKSAVE: Set new Account to: " + textBoxAccountCheck.Text);
+            
+            // check streams
+            
             
             this.settings.Save();
+            bSender.Enabled = true;
         }
         /// <summary>
         /// Close the Settings menu without storing data
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void ButtonSettingsCANCELClick(object sender, EventArgs e)
+        void ButtonSettingsClickCANCEL(object sender, EventArgs e)
         {
-            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCANCELCLICK: Button click - Cancel");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCLICKCANCEL: Button click - Cancel");
             this.Visible = false;
         }
         
@@ -214,9 +214,9 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        void ButtonSettingsGetUsersClick(object sender, EventArgs e)
+        void ButtonSettingsClickGetUsers(object sender, EventArgs e)
         {
-            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSGETUSERSCLICK: Button click - Get streams a user is following - got auth token?");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCLICKGETUSERS: Button click - Get streams a user is following - got auth token?");
             // TODO: Implement ButtonSettingsGetUsersClick, requires token, add field for token and gettoken url to twitch, no default token, check if user and token create correct answer
             MessageBox.Show("Not available right now.", "Channels following");
             return;
@@ -291,8 +291,40 @@ namespace twitch_stream_check
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "PUTSETTINGSINTOFORM: Get settings into the form fields");
             comboBoxInterval.Text = convertNum(settings.checkinterval.ToString()).ToString();
-            textBoxStreamers.Text = convertAlphaNum(convertArraytoLF(settings.checkusers), true);
             textBoxAccountCheck.Text = convertAlphaNum(this.settings.checkaccount);
+            
+            try {
+                
+                Debug.WriteLineIf(GlobalVar.DEBUG, "PUTSETTINGSINTOFORM: Fill bsStream and dgvStreams with settings");
+                // rebind BindingSource to make sure it is bound.. designer shows it bound but does not when this point in code is reached...
+                bsStreams.DataSource = settings.streams;
+                dgvStreams.DataSource = bsStreams;
+                
+                dgvStreams.AutoGenerateColumns = false; // columns are set at designtime
+                dgvStreams.Refresh();
+            } catch (Exception ex) {
+                Log.Add("getOnlineStatus>" + ex.Message);
+            }
+            
+        }
+        
+        /// <summary>
+        /// Resize columns to usefull needs but keep the possibility of user resize afterwards (will get reset after each new input)
+        /// Maybe not needed when Streamnames are set to Fill?
+        /// </summary>
+        private void ResizeColumns()
+        {
+            int iMax = dgvStreams.Columns.Count;
+            Debug.WriteLineIf(GlobalVar.DEBUG, "RESIZECOLUMNS: Columns: " + iMax);
+            int iWidth = 0;
+            // skip the first column as it should never change
+            for (int i = 1; i < iMax; i++) {
+                Debug.WriteLineIf(GlobalVar.DEBUG, "RESIZECOLUMNS: ColumnType[" + i + "]: " + dgvStreams.Columns[i].CellType);
+                dgvStreams.Columns[i].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
+                iWidth = dgvStreams.Columns[i].Width;
+                dgvStreams.Columns[i].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                dgvStreams.Columns[i].Width = iWidth;
+            }
         }
         
         /// <summary>
@@ -342,7 +374,7 @@ namespace twitch_stream_check
             
             string sURL = sBaseURL + sAccount + sParams;
             Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Created URL: " + sURL);
-            if (doWebRequest(sURL)) {
+            if (sAccount != "" && doWebRequest(sURL)) {
                 Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Parsing WebResponse");
                 try {
                     using (Stream stream = HttpWResp.GetResponseStream()) {
@@ -369,7 +401,7 @@ namespace twitch_stream_check
                         sReturn = data.stream.game;
                     }
                 } catch (Exception ex) {
-                    Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Failed on Deserialize: " + ex.Message);
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "!EXCEPTION!:GETONLINESTATUS: Failed on Deserialize: " + ex.Message);
                     Log.Add("getOnlineStatus>" + ex.Message);
                 }
                 
@@ -427,7 +459,7 @@ namespace twitch_stream_check
             
             // -1 means we have no matching menu entry and will add a new one, otherwise do nothing
             if (iMenuIDX == -1) {
-                notifyIcon1.ShowBalloonTip(900, "Stream is LIVE", sUser + " playing " + sGame, ToolTipIcon.None);
+//                notifyIcon1.ShowBalloonTip(900, "Stream is LIVE", sUser + " playing " + sGame, ToolTipIcon.None);
 
                 // add the new stream on top of the menu and append the other entries back to the menu
                 // make sure to add name to be able to search by key!
@@ -436,7 +468,12 @@ namespace twitch_stream_check
                 Debug.WriteLineIf(GlobalVar.DEBUG, "CREATEMENUENTRY: Created new MenuItem");
                 // add the new stream on top of the menu
                 try {
-                    MyMenu.Items.Insert(0, tsiNewItem);
+                    MyMenu.Invoke((MethodInvoker) delegate {
+                                      lock (MyMenu) {
+                                          MyMenu.Items.Insert(0, tsiNewItem);
+                                      }
+                                  });
+//                    MyMenu.Items.Insert(0, tsiNewItem);
                     bRet = true;
                     // increase active streams number only when we are really adding a new one
                     iActiveStreams++;
@@ -468,18 +505,23 @@ namespace twitch_stream_check
             
             Debug.WriteLineIf(GlobalVar.DEBUG, "removeMenuEntry: Remove menu entry for stream: " + sUser);
             bool bRet = false;
-            int iMenuIDX = MyMenu.Items.IndexOfKey(sUser);
-            Debug.WriteLineIf(GlobalVar.DEBUG, "removeMenuEntry: Menu index: " + iMenuIDX);
-            
-            
-            if (iMenuIDX != -1) {
-                Debug.WriteLineIf(GlobalVar.DEBUG, "removeMenuEntry: Entry found at: " + iMenuIDX);
-                notifyIcon1.ShowBalloonTip(750, "Stream is Offline", sUser, ToolTipIcon.Info);
-                MyMenu.Items.RemoveAt(iMenuIDX);
-                bRet = true;
-                // decrease active streams number only when we are really removing an entry
-                iActiveStreams--;
-            }
+            MyMenu.Invoke((MethodInvoker) delegate {
+                              lock (MyMenu) {
+                                  int iMenuIDX = MyMenu.Items.IndexOfKey(sUser);
+                                  Debug.WriteLineIf(GlobalVar.DEBUG, "removeMenuEntry: Menu index: " + iMenuIDX);
+                                  
+                                  
+                                  if (iMenuIDX != -1) {
+                                      Debug.WriteLineIf(GlobalVar.DEBUG, "removeMenuEntry: Entry found at: " + iMenuIDX);
+//                                      notifyIcon1.ShowBalloonTip(750, "Stream is Offline", sUser, ToolTipIcon.Info);
+                                                            MyMenu.Items.RemoveAt(iMenuIDX);
+//                                      MyMenu.Items.RemoveAt(iMenuIDX);
+                                      bRet = true;
+                                      // decrease active streams number only when we are really removing an entry
+                                      iActiveStreams--;
+                                  }
+                              }
+                          });
             
             
             Debug.WriteLineIf(GlobalVar.DEBUG, "REMOVEMENUENTRY: END");
@@ -491,12 +533,15 @@ namespace twitch_stream_check
             if (this.InvokeRequired)
                 return (bool)this.Invoke ((Func<bool>)updateToolTip);
             
+            string s = "";
             // display info when we are currently running an update
             if (bGettingData) {
-                notifyIcon1.Text = iActiveStreams + " active Streams (Updating " + iCurrentCheck + "/" + iMaxCheck + ")";
+                s = iActiveStreams + " active Streams (Updating " + iCurrentCheck + "/" + iMaxCheck + ")";
             } else {
-                notifyIcon1.Text = iActiveStreams + " active Streams";
+                s = iActiveStreams + " active Streams";
             }
+            notifyIcon1.Text = s;
+//            MyMenu.Invoke((MethodInvoker) delegate {notifyIcon1.Text = s;});
             
             return true;
         }
@@ -541,7 +586,7 @@ namespace twitch_stream_check
         public bool checkUser(string sUser)
         {
             bool bActive = false;
-            Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKUSER: We lookup a user");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKUSER: We lookup a user: " + sUser);
             //notifyIcon1.ShowBalloonTip(1500, "Checking user", sUser, ToolTipIcon.Info);
             string sGame = getOnlineStatus(sUser);
             Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKUSER: We lookuped a user");
@@ -577,18 +622,18 @@ namespace twitch_stream_check
         public void checkStreams()
         {
             // create a local copy of the current list of streams to avoid getting a mixup when changing settings, settings were used directly earlier
-            string[] aCheckUsers = settings.checkusers; // store a local copy of streamlist
+            IList<twStream> aCheckUsers = settings.streams; // store a local copy of streamlist
             
             Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKSTREAMS: We gotta check our list of streams");
             if (!bGettingData) {
                 bGettingData = true;
                 
                 // set maxcheck for progress display
-                iMaxCheck = aCheckUsers.Length;
+                iMaxCheck = aCheckUsers.Count;
                 try {
                     for (int i = 0; i < iMaxCheck; i++) {
                         iCurrentCheck = i + 1;
-                        checkUser(aCheckUsers[i]);
+                        checkUser(aCheckUsers[i].sStreamname);
                     }
                 } catch (Exception ex) {
                     // user index could be out of bounds
@@ -662,26 +707,174 @@ namespace twitch_stream_check
             }
         }
         
+//        void dgvStreams_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+//        {
+//            // only redo the first column header
+//            if (e.RowIndex == -1 && e.ColumnIndex == -1) {
+//                Brush brushTMP = new SolidBrush(e.CellStyle.ForeColor);
+//                e.PaintBackground(e.ClipBounds, true);
+//                e.Graphics.DrawString(e.FormattedValue.ToString(), e.CellStyle.Font, brushTMP, e.CellBounds.X - 3, e.CellBounds.Y, StringFormat.GenericDefault);
+//                e.Handled = true;
+//            }
+//        }
+        
+        /// <summary>
+        /// Check if the data entered matches what we need/want
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void dgvStreams_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
+        {
+            string sColumn = dgvStreams.Columns[e.ColumnIndex].Name;
+            string sText = e.FormattedValue.ToString();
+            Debug.WriteLineIf(GlobalVar.DEBUG, "DGVSTREAMS_CELLCALIDATING: START");
+            // Don't continue if if we are not checking the streamname
+            if (sColumn.Equals("sStreamname")) {
+                Debug.WriteLineIf(GlobalVar.DEBUG, "DGVSTREAMS_CELLCALIDATING: checking streamname");
+                // Check if only valid chars have been entered
+                foreach (char c in sText)
+                {
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "DGVSTREAMS_CELLCALIDATING: checking: " + sText + ": " + c);
+                    if (!Char.IsLetterOrDigit(c) && c != '_') {
+                        Debug.WriteLineIf(GlobalVar.DEBUG, "DGVSTREAMS_CELLCALIDATING: Character is not allowed: " + c);
+                        dgvStreams.Rows[e.RowIndex].ErrorText = "Please only enter valid streamnames (a-z, _)";
+                        MessageBox.Show(dgvStreams.Rows[e.RowIndex].ErrorText + Environment.NewLine + Environment.NewLine + sText, "Invalid Streamname", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1);
+                        dgvStreams.Rows[e.RowIndex].Cells[e.ColumnIndex].Style.BackColor = Color.Red;
+                        e.Cancel = true;
+                    }
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Clear error message to make sure there is non displayed anymore
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void dgvStreams_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            Debug.WriteLineIf(GlobalVar.DEBUG, "DGVSTREAMS_CELLENDEDIT: Cell edit ended");
+            dgvStreams.Rows[e.RowIndex].ErrorText = String.Empty;
+            dgvStreams.Rows[e.RowIndex].Cells[e.ColumnIndex].Style.BackColor = Color.Empty;
+        }
+        
         /// <summary>
         /// Wrapper to update ToolTip everytime the streamer count changes
         /// </summary>
         public int iActiveStreams {
             get{ return _iActiveStreams; }
             set {
-                _iActiveStreams = value; 
+                _iActiveStreams = value;
                 updateToolTip();
             }
         }
         
+        void dgvStreams_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            // only DataGridView allowed in here because we are racist!
+            var senderGrid = (DataGridView)sender;
+            
+            // check if a button was clicked and if it's not inside the header
+            if (senderGrid.Columns[e.ColumnIndex] is DataGridViewButtonColumn && e.RowIndex >= 0)
+            {
+                try {
+                    senderGrid.Rows.RemoveAt(e.RowIndex);
+//                    senderGrid.Refresh();
+                } catch (Exception ex) {
+                    Log.Add("dgvStreams_CellContentClick>" + ex.Message);
+                }
+            }
+        }
+        
+        public void putDefaultSettings()
+        {
+            // population of default data moved to putDefaultSettings() to avoid getting extra List entries on Load
+            
+            if (settings.checkinterval == 0 || settings.checkinterval < 1) {
+                settings.checkinterval = 5;
+            }
+            
+            if (settings.checkaccount == null) {
+                settings.checkaccount = "Account";
+            }
+            
+            // add default entries when list is empty
+            if (settings.streams == null) {
+//                string[] streamers = new string[] {"Autositz", "DRUCKWELLETV", "Garrynewman", "Denkii"};
+                string[] streamers = new string[] {"Entry 1", "Entry 2", "Entry 3", "Entry 4"};
+                settings.streams = new List<twStream>();
+                foreach (string s in streamers) {
+                    twStream s2 = new twStream();
+                    s2.bImportant= true;
+                    s2.sStreamname = s;
+                    settings.streams.Add(s2);
+                }
+            }
+            
+        }
         
         /// <summary>
         /// Settings definition
         /// </summary>
         class MySettings : AppSettings<MySettings>
         {
-            public string[] checkusers = {"Autositz", "DRUCKWELLETV", "Garrynewman", "Denkii"};
-            public int checkinterval = 1;
-            public string checkaccount = "Account";
+//            public DataTable checkusers;
+//            public string[] checkusers2;
+            public int checkinterval;
+            public string checkaccount;
+            public IList<twStream> streams;
+            
+            public MySettings()
+            {
+                // population of default data moved to putDefaultSettings() to avoid getting extra List entries on Load
+                
+#if _OLDDEFAULT
+                checkinterval = 1;
+                checkaccount = "Account";
+                
+                // old settings
+                checkusers2 = new string[] {"Autositz", "DRUCKWELLETV", "Garrynewman", "Denkii"};
+                
+                // new settings
+//                checkusers = new DataTable("Streams");
+//                DataColumn dcImportant = new DataColumn();
+//                dcImportant.DataType = Type.GetType("System.Boolean");
+//                dcImportant.Caption = "!";
+//                dcImportant.ColumnName = "bImportant";
+//                dcImportant.DefaultValue = false;
+//                DataColumn dcStream = new DataColumn();
+//                dcStream.DataType = Type.GetType("System.String");
+//                dcStream.Caption = "Stream names";
+//                dcStream.ColumnName = "sStreamname";
+//                dcStream.DefaultValue = "";
+//                
+//                checkusers.Columns.AddRange(new DataColumn[] {
+//                                            dcImportant,
+//                                            dcStream});
+//                
+//                // add default values
+//                if (checkusers.Rows.Count < 1) {
+//                    foreach (string s in checkusers2) {
+//                        DataRow drTMP = checkusers.NewRow();
+//                        drTMP["bImportant"] = true;
+//                        drTMP["sStreamname"] = s;
+//                        checkusers.Rows.Add(drTMP);
+//                    }
+//                }
+                
+                // add default entries when list is empty
+                if (streams == null) {
+                    streams = new List<twStream>();
+                    foreach (string s in checkusers2) {
+                        twStream s2 = new twStream();
+                        s2.bImportant= true;
+                        s2.sStreamname = s;
+                        streams.Add(s2);
+                    }
+                }
+                
+#endif
+            }
         }
         
         public int GetNthIndex(string sText, string sSearch, int iOccurred)
@@ -727,8 +920,12 @@ namespace twitch_stream_check
     /// </summary>
     public class AppSettings<T> where T : new()
     {
-        private const string DEFAULT_FILENAME = "settings.jsn";
+        private const string DEFAULT_FILENAME = "twitch-stream-check-settings.json";
         
+        public void Save(object obj)
+        {
+            File.WriteAllText("bla.json", JsonConvert.SerializeObject(obj));
+        }
         /// <summary>
         /// Store settings into file
         /// </summary>
@@ -736,7 +933,7 @@ namespace twitch_stream_check
         public void Save(string fileName = DEFAULT_FILENAME)
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGS:SAVE: Data save initialized - using self");
-            File.WriteAllText(fileName, (new JavaScriptSerializer()).Serialize(this));
+            File.WriteAllText(fileName, JsonConvert.SerializeObject(this));
         }
         
         /// <summary>
@@ -747,7 +944,7 @@ namespace twitch_stream_check
         public static void Save(T pSettings, string fileName = DEFAULT_FILENAME)
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGS:SAVE: Data save initialized - with given object");
-            File.WriteAllText(fileName, (new JavaScriptSerializer()).Serialize(pSettings));
+            File.WriteAllText(fileName, JsonConvert.SerializeObject(pSettings));
         }
         
         /// <summary>
@@ -757,12 +954,13 @@ namespace twitch_stream_check
         /// <returns>Returns the settings class with loaded settings</returns>
         public static T Load(string fileName = DEFAULT_FILENAME)
         {
+            // TODO: Check if loaded data matches current settings in datatypes?
             Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGS:LOAD: Data load initialized");
             T t = new T();
             try {
                 if (File.Exists(fileName)) {
                     Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGS:LOAD: Convert our loaded data into an useable object");
-                    t = (new JavaScriptSerializer()).Deserialize<T>(File.ReadAllText(fileName));
+                    t = JsonConvert.DeserializeObject<T>(File.ReadAllText(fileName));
                 }
             } catch (Exception ex) {
                 Debug.WriteLineIf(GlobalVar.DEBUG, "!EXCEPTION!:SETTINGS:LOAD: Something went wrong during load: " + ex.Message);
@@ -806,8 +1004,39 @@ namespace twitch_stream_check
             }
         }
     }
-
     
+    /// <summary>
+    /// Class for each single stream entry
+    /// </summary>
+    public class twStream
+    {
+        public bool bImportant { get; set; }
+        public string sStreamname { get; set; }
+        
+        public twStream()
+        {
+            bImportant = false;
+            sStreamname = "";
+        }
+    }
+    
+    public class twDataGridViewButtonColumn : DataGridViewButtonColumn
+    {
+        public override DataGridViewCellStyle DefaultCellStyle {
+            get {
+                DataGridViewCellStyle TMPDefaultCellStyle = new DataGridViewCellStyle();
+                TMPDefaultCellStyle.Padding = new Padding(0, TMPDefaultCellStyle.Padding.Top, 0, TMPDefaultCellStyle.Padding.Bottom);
+                return TMPDefaultCellStyle;
+            }
+            set {
+                base.DefaultCellStyle = value;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Holds static global variables
+    /// </summary>
     public static class GlobalVar
     {
         public const bool DEBUG = true; // enable or disable debug messages
