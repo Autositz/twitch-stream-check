@@ -12,6 +12,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Drawing;
 using System.Data;
 using System.Net;
 using System.Text;
@@ -292,12 +293,12 @@ namespace twitch_stream_check
             comboBoxInterval.Text = convertNum(settings.checkinterval.ToString()).ToString();
             textBoxAccountCheck.Text = convertAlphaNum(this.settings.checkaccount);
             
-            // FIXME: Missing new line and Add button not working
             try {
                 
                 Debug.WriteLineIf(GlobalVar.DEBUG, "PUTSETTINGSINTOFORM: Fill bsStream and dgvStreams with settings");
+                // rebind BindingSource to make sure it is bound.. designer shows it bound but does not when this point in code is reached...
                 bsStreams.DataSource = settings.streams;
-                dgvStreams.DataSource = bsStreams; // rebind DataSource to make sure it is bound.. designer shows it bound but does not when this point in code is reached...
+                dgvStreams.DataSource = bsStreams;
                 
                 dgvStreams.AutoGenerateColumns = false; // columns are set at designtime
                 dgvStreams.Refresh();
@@ -706,17 +707,84 @@ namespace twitch_stream_check
             }
         }
         
+//        void dgvStreams_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+//        {
+//            // only redo the first column header
+//            if (e.RowIndex == -1 && e.ColumnIndex == -1) {
+//                Brush brushTMP = new SolidBrush(e.CellStyle.ForeColor);
+//                e.PaintBackground(e.ClipBounds, true);
+//                e.Graphics.DrawString(e.FormattedValue.ToString(), e.CellStyle.Font, brushTMP, e.CellBounds.X - 3, e.CellBounds.Y, StringFormat.GenericDefault);
+//                e.Handled = true;
+//            }
+//        }
+        
+        /// <summary>
+        /// Check if the data entered matches what we need/want
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void dgvStreams_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
+        {
+            string sColumn = dgvStreams.Columns[e.ColumnIndex].Name;
+            string sText = e.FormattedValue.ToString();
+            Debug.WriteLineIf(GlobalVar.DEBUG, "DGVSTREAMS_CELLCALIDATING: START");
+            // Don't continue if if we are not checking the streamname
+            if (sColumn.Equals("sStreamname")) {
+                Debug.WriteLineIf(GlobalVar.DEBUG, "DGVSTREAMS_CELLCALIDATING: checking streamname");
+                // Check if only valid chars have been entered
+                foreach (char c in sText)
+                {
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "DGVSTREAMS_CELLCALIDATING: checking: " + sText + ": " + c);
+                    if (!Char.IsLetterOrDigit(c) && c != '_') {
+                        Debug.WriteLineIf(GlobalVar.DEBUG, "DGVSTREAMS_CELLCALIDATING: Character is not allowed: " + c);
+                        dgvStreams.Rows[e.RowIndex].ErrorText = "Please only enter valid streamnames (a-z, _)";
+                        MessageBox.Show(dgvStreams.Rows[e.RowIndex].ErrorText + Environment.NewLine + Environment.NewLine + sText, "Invalid Streamname", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1);
+                        dgvStreams.Rows[e.RowIndex].Cells[e.ColumnIndex].Style.BackColor = Color.Red;
+                        e.Cancel = true;
+                    }
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Clear error message to make sure there is non displayed anymore
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void dgvStreams_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            Debug.WriteLineIf(GlobalVar.DEBUG, "DGVSTREAMS_CELLENDEDIT: Cell edit ended");
+            dgvStreams.Rows[e.RowIndex].ErrorText = String.Empty;
+            dgvStreams.Rows[e.RowIndex].Cells[e.ColumnIndex].Style.BackColor = Color.Empty;
+        }
+        
         /// <summary>
         /// Wrapper to update ToolTip everytime the streamer count changes
         /// </summary>
         public int iActiveStreams {
             get{ return _iActiveStreams; }
             set {
-                _iActiveStreams = value; 
+                _iActiveStreams = value;
                 updateToolTip();
             }
         }
         
+        void dgvStreams_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            // only DataGridView allowed in here because we are racist!
+            var senderGrid = (DataGridView)sender;
+            
+            // check if a button was clicked and if it's not inside the header
+            if (senderGrid.Columns[e.ColumnIndex] is DataGridViewButtonColumn && e.RowIndex >= 0)
+            {
+                try {
+                    senderGrid.Rows.RemoveAt(e.RowIndex);
+//                    senderGrid.Refresh();
+                } catch (Exception ex) {
+                    Log.Add("dgvStreams_CellContentClick>" + ex.Message);
+                }
+            }
+        }
         
         public void putDefaultSettings()
         {
@@ -949,6 +1017,20 @@ namespace twitch_stream_check
         {
             bImportant = false;
             sStreamname = "";
+        }
+    }
+    
+    public class twDataGridViewButtonColumn : DataGridViewButtonColumn
+    {
+        public override DataGridViewCellStyle DefaultCellStyle {
+            get {
+                DataGridViewCellStyle TMPDefaultCellStyle = new DataGridViewCellStyle();
+                TMPDefaultCellStyle.Padding = new Padding(0, TMPDefaultCellStyle.Padding.Top, 0, TMPDefaultCellStyle.Padding.Bottom);
+                return TMPDefaultCellStyle;
+            }
+            set {
+                base.DefaultCellStyle = value;
+            }
         }
     }
     

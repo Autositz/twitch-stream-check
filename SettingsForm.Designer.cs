@@ -30,8 +30,9 @@ namespace twitch_stream_check
         private System.Windows.Forms.TextBox textBoxAccountCheck;
         private System.Windows.Forms.LinkLabel linkLabelFeedback;
         private System.Windows.Forms.DataGridView dgvStreams;
+        private twDataGridViewButtonColumn Delete;
         private System.Windows.Forms.DataGridViewCheckBoxColumn bImportant;
-        private System.Windows.Forms.DataGridViewTextBoxColumn sStream;
+        private System.Windows.Forms.DataGridViewTextBoxColumn sStreamname;
         private System.Windows.Forms.BindingSource bsStreams;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.TextBox textBoxAccountToken;
@@ -67,6 +68,7 @@ namespace twitch_stream_check
         {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SettingsForm));
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
             this.MyMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
@@ -83,8 +85,9 @@ namespace twitch_stream_check
             this.buttonSettingsCANCEL = new System.Windows.Forms.Button();
             this.linkLabelFeedback = new System.Windows.Forms.LinkLabel();
             this.dgvStreams = new System.Windows.Forms.DataGridView();
+            this.Delete = new twitch_stream_check.twDataGridViewButtonColumn();
             this.bImportant = new System.Windows.Forms.DataGridViewCheckBoxColumn();
-            this.sStream = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.sStreamname = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.bsStreams = new System.Windows.Forms.BindingSource(this.components);
             this.label4 = new System.Windows.Forms.Label();
             this.textBoxAccountToken = new System.Windows.Forms.TextBox();
@@ -268,8 +271,9 @@ namespace twitch_stream_check
             this.dgvStreams.AutoSizeRowsMode = System.Windows.Forms.DataGridViewAutoSizeRowsMode.AllCells;
             this.dgvStreams.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dgvStreams.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.Delete,
             this.bImportant,
-            this.sStream});
+            this.sStreamname});
             this.dgvStreams.Location = new System.Drawing.Point(6, 89);
             this.dgvStreams.MultiSelect = false;
             this.dgvStreams.Name = "dgvStreams";
@@ -277,28 +281,46 @@ namespace twitch_stream_check
             this.dgvStreams.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.CellSelect;
             this.dgvStreams.Size = new System.Drawing.Size(364, 183);
             this.dgvStreams.TabIndex = 11;
+            this.dgvStreams.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvStreams_CellContentClick);
+            this.dgvStreams.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvStreams_CellEndEdit);
+            this.dgvStreams.CellValidating += new System.Windows.Forms.DataGridViewCellValidatingEventHandler(this.dgvStreams_CellValidating);
+            // 
+            // Delete
+            // 
+            this.Delete.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCellsExceptHeader;
+            this.Delete.DefaultCellStyle = dataGridViewCellStyle1;
+            this.Delete.Frozen = true;
+            this.Delete.HeaderText = "";
+            this.Delete.MinimumWidth = 10;
+            this.Delete.Name = "Delete";
+            this.Delete.ReadOnly = true;
+            this.Delete.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+            this.Delete.Text = "X";
+            this.Delete.ToolTipText = "Delete Stream from list";
+            this.Delete.UseColumnTextForButtonValue = true;
+            this.Delete.Width = 21;
             // 
             // bImportant
             // 
             this.bImportant.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
             this.bImportant.DataPropertyName = "bImportant";
             this.bImportant.HeaderText = "!";
-            this.bImportant.MinimumWidth = 15;
+            this.bImportant.MinimumWidth = 10;
             this.bImportant.Name = "bImportant";
             this.bImportant.Resizable = System.Windows.Forms.DataGridViewTriState.False;
             this.bImportant.ToolTipText = "Is this an important stream and should be monitored seperatly?";
             this.bImportant.Width = 21;
             // 
-            // sStream
+            // sStreamname
             // 
-            this.sStream.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.sStream.DataPropertyName = "sStreamname";
-            this.sStream.HeaderText = "Stream names";
-            this.sStream.MaxInputLength = 250;
-            this.sStream.MinimumWidth = 50;
-            this.sStream.Name = "sStream";
-            this.sStream.Resizable = System.Windows.Forms.DataGridViewTriState.False;
-            this.sStream.ToolTipText = "Name of the stream to follow";
+            this.sStreamname.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.sStreamname.DataPropertyName = "sStreamname";
+            this.sStreamname.HeaderText = "Stream names";
+            this.sStreamname.MaxInputLength = 250;
+            this.sStreamname.MinimumWidth = 50;
+            this.sStreamname.Name = "sStreamname";
+            this.sStreamname.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+            this.sStreamname.ToolTipText = "Name of the stream to follow";
             // 
             // label4
             // 
