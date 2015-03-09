@@ -3,8 +3,6 @@
  * User: Autositz
  * Date: 01.03.2015
  * Time: 00:19
- * 
- * To change this template use Tools | Options | Coding | Edit Standard Headers.
  */
 using System;
 using System.Windows.Forms;
@@ -64,6 +62,8 @@ namespace twitch_stream_check
                 tMainTimer.Enabled = true; // enable timer
                 // prevent form from being displayed at startup
                 SettingsForm objSettingsForm = new SettingsForm();
+                MySettings settings = new MySettings();
+                settings = objSettingsForm.Start();
                 
                 Application.Run();
                 

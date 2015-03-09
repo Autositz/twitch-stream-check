@@ -200,6 +200,7 @@ namespace twitch_stream_check
             this.comboBoxInterval.FormatString = "N0";
             this.comboBoxInterval.FormattingEnabled = true;
             this.comboBoxInterval.Items.AddRange(new object[] {
+            "1",
             "5",
             "10",
             "15",

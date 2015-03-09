@@ -7,7 +7,7 @@
  * To change this template use Tools | Options | Coding | Edit Standard Headers.
  */
 
-#define _HACK
+//#define _HACK
 
 using System;
 using System.Diagnostics;
@@ -31,14 +31,38 @@ namespace twitch_stream_check
     /// </summary>
     public partial class SettingsForm : Form
     {
-        private MySettings settings; // our settings
-        private HttpWebResponse HttpWResp; // our reply from our http request
-        private bool bGettingData; // are we currently working on getting data?
-        private int iCurrentCheck; // current running check stream
-        private int iMaxCheck; // number of entries of streams to check
-        private int _iActiveStreams; // currently active streams to display in icon tooltip
-        private System.Timers.Timer tBackgroundTimer; // background timer to call events
-        private Logging Log; // use logging for exceptions
+        /// <summary>
+        /// Hold currently loaded settings
+        /// </summary>
+        public MySettings settings;
+        /// <summary>
+        /// Holds the last response from a web request (make sure to not make rival requests at the same time)
+        /// </summary>
+        private HttpWebResponse HttpWResp;
+        /// <summary>
+        /// Is true if there is currently a Streamlist check running
+        /// </summary>
+        private bool bGettingData;
+        /// <summary>
+        /// The running number of the current check
+        /// </summary>
+        private int iCurrentCheck;
+        /// <summary>
+        /// Current number of streamlist entries to check
+        /// </summary>
+        private int iMaxCheck;
+        /// <summary>
+        /// Currently active streams to display in icon tooltip
+        /// </summary>
+        private int _iActiveStreams;
+        /// <summary>
+        /// Background timer to call events
+        /// </summary>
+        private System.Timers.Timer tBackgroundTimer;
+        /// <summary>
+        /// Use logging for exceptions
+        /// </summary>
+        private Logging Log;
         
         
         public SettingsForm()
@@ -53,9 +77,26 @@ namespace twitch_stream_check
             
             // load error logging
             this.Log = new Logging();
+            
             // load stored settings from file and check if default values need to be put in
             this.settings = MySettings.Load();
             putDefaultSettings();
+        }
+        
+        public MySettings Start()
+        {
+            this.Start(this.settings);
+            return this.settings;
+        }
+        
+        /// <summary>
+        /// Start putting data - moved in here to avoid invoke complaining about uninitialized component
+        /// </summary>
+        public MySettings Start(MySettings objSettings)
+        {
+            // put supplied settings into working space
+            this.settings = objSettings;
+            
             // set the check value if a check is currently running
             bGettingData = false;
             iCurrentCheck = 0;
@@ -108,7 +149,7 @@ namespace twitch_stream_check
             tBackgroundTimer.Enabled = true; // enable timer
             
             
-            
+            return this.settings;
         }
         
         /// <summary>
@@ -442,30 +483,30 @@ namespace twitch_stream_check
         /// Create a new menu entry to follow the stream, but check if it already exists
         /// </summary>
         /// <param name="sUser">Streamname</param>
-        private bool createMenuEntry(string sUser, string sGame)
+        private bool MenuEntryCreate(string sUser, string sGame)
         {
             // make sure we can access the settingsform
             if (this.InvokeRequired)
             {
-                Debug.WriteLineIf(GlobalVar.DEBUG, "CREATEMENUENTRY: NEEDS INVOKE");
-                return (bool)this.Invoke ((Func<string,string,bool>)createMenuEntry, sUser, sGame);
+                Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYCREATE: NEEDS INVOKE");
+                return (bool)this.Invoke ((Func<string,string,bool>)MenuEntryCreate, sUser, sGame);
             }
             
-            Debug.WriteLineIf(GlobalVar.DEBUG, "CREATEMENUENTRY: START");
-            Debug.WriteLineIf(GlobalVar.DEBUG, "CREATEMENUENTRY: Creating new Menu entry for " + sUser + " playing game " + sGame);
+            Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYCREATE: START");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYCREATE: Creating new Menu entry for " + sUser + " playing game " + sGame);
             bool bRet = false;
             int iMenuIDX = MyMenu.Items.IndexOfKey(sUser);
-            Debug.WriteLineIf(GlobalVar.DEBUG, "CREATEMENUENTRY: Result of looking up menu entry: " + iMenuIDX);
+            Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYCREATE: Result of looking up menu entry: " + iMenuIDX);
             
             // -1 means we have no matching menu entry and will add a new one, otherwise do nothing
             if (iMenuIDX == -1) {
-//                notifyIcon1.ShowBalloonTip(900, "Stream is LIVE", sUser + " playing " + sGame, ToolTipIcon.None);
+                notifyIcon1.ShowBalloonTip(900, "Stream is LIVE", sUser + " playing " + sGame, ToolTipIcon.None);
 
                 // add the new stream on top of the menu and append the other entries back to the menu
                 // make sure to add name to be able to search by key!
                 ToolStripItem tsiNewItem = new ToolStripMenuItem(sUser, null, (sender, e) => openStream(sUser), sUser);
                 tsiNewItem.ToolTipText = "Playing: " + convertAlphaNum(sGame);
-                Debug.WriteLineIf(GlobalVar.DEBUG, "CREATEMENUENTRY: Created new MenuItem");
+                Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYCREATE: Created new MenuItem");
                 // add the new stream on top of the menu
                 try {
                     MyMenu.Invoke((MethodInvoker) delegate {
@@ -479,14 +520,14 @@ namespace twitch_stream_check
                     iActiveStreams++;
                 } catch (Exception ex) {
                     object[] tmp = ParseException(ex);
-                    Debug.WriteLineIf(GlobalVar.DEBUG, "!EXCEPTION!:CREATEMENUENTRY: Error inserting menu item (" + tmp[2] + ":" + tmp[3] + ":"  + tmp[0] + "): " + ex.Message);
-                    Log.Add("createMenuEntry>" + ex.Message);
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "!EXCEPTION!:MENUENTRYCREATE: Error inserting menu item (" + tmp[2] + ":" + tmp[3] + ":"  + tmp[0] + "): " + ex.Message);
+                    Log.Add("MenuEntryCreate>" + ex.Message);
                 }
                 
-                Debug.WriteLineIf(GlobalVar.DEBUG, "CREATEMENUENTRY: Item added to Menu");
+                Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYCREATE: Item added to Menu");
             }
             
-            Debug.WriteLineIf(GlobalVar.DEBUG, "CREATEMENUENTRY: END");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYCREATE: END");
             return bRet;
         }
         
@@ -494,26 +535,26 @@ namespace twitch_stream_check
         /// Check if a menu entry exists and remove it
         /// </summary>
         /// <param name="sUser">Streamname</param>
-        private bool removeMenuEntry(string sUser)
+        private bool MenuEntryRemove(string sUser)
         {
             // make sure we can access the settingsform
             if (this.InvokeRequired)
             {
-                Debug.WriteLineIf(GlobalVar.DEBUG, "REMOVEMENUENTRY: NEEDS INVOKE");
-                return (bool)this.Invoke ((Func<string,bool>)removeMenuEntry, sUser);
+                Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: NEEDS INVOKE");
+                return (bool)this.Invoke ((Func<string,bool>)MenuEntryRemove, sUser);
             }
             
-            Debug.WriteLineIf(GlobalVar.DEBUG, "removeMenuEntry: Remove menu entry for stream: " + sUser);
+            Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Remove menu entry for stream: " + sUser);
             bool bRet = false;
             MyMenu.Invoke((MethodInvoker) delegate {
                               lock (MyMenu) {
                                   int iMenuIDX = MyMenu.Items.IndexOfKey(sUser);
-                                  Debug.WriteLineIf(GlobalVar.DEBUG, "removeMenuEntry: Menu index: " + iMenuIDX);
+                                  Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Menu index: " + iMenuIDX);
                                   
                                   
                                   if (iMenuIDX != -1) {
-                                      Debug.WriteLineIf(GlobalVar.DEBUG, "removeMenuEntry: Entry found at: " + iMenuIDX);
-//                                      notifyIcon1.ShowBalloonTip(750, "Stream is Offline", sUser, ToolTipIcon.Info);
+                                      Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Entry found at: " + iMenuIDX);
+                                      notifyIcon1.ShowBalloonTip(750, "Stream is Offline", sUser, ToolTipIcon.Info);
                                                             MyMenu.Items.RemoveAt(iMenuIDX);
 //                                      MyMenu.Items.RemoveAt(iMenuIDX);
                                       bRet = true;
@@ -524,7 +565,7 @@ namespace twitch_stream_check
                           });
             
             
-            Debug.WriteLineIf(GlobalVar.DEBUG, "REMOVEMENUENTRY: END");
+            Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: END");
             return bRet;
         }
         
@@ -607,10 +648,10 @@ namespace twitch_stream_check
             
             if (sGame != null) {
                 //MessageBox.Show(sUser + Environment.NewLine + sGame, "Creating Menu");
-                createMenuEntry(sUser, sGame);
+                MenuEntryCreate(sUser, sGame);
                 bActive = true;
             } else {
-                removeMenuEntry(sUser);
+                MenuEntryRemove(sUser);
             }
             
             return bActive;
@@ -644,9 +685,9 @@ namespace twitch_stream_check
             } else {
                 Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKSTREAMS: Another check is still running..." + iCurrentCheck + "/" + iMaxCheck);
                 // FIXME RELEASE: Make sure to have this enabled for release! So users get a warning when their list can't be processed in between intervals.
-//                MessageBox.Show("Consider raising the interval a bit." + Environment.NewLine + "Processing " + iCurrentCheck + "/" + iMaxCheck + Environment.NewLine + Environment.NewLine +
-//                                "If this message keeps coming up over and over again at the same step then consider restarting the program.",
-//                                "Check already running", MessageBoxButtons.OK, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1);
+                MessageBox.Show("Consider raising the interval a bit." + Environment.NewLine + "Processing " + iCurrentCheck + "/" + iMaxCheck + Environment.NewLine + Environment.NewLine +
+                                "If this message keeps coming up over and over again at the same step then consider restarting the program.",
+                                "Check already running", MessageBoxButtons.OK, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1);
             }
         }
         
@@ -769,6 +810,11 @@ namespace twitch_stream_check
             }
         }
         
+        /// <summary>
+        /// Handle clicks into the Streamlist cells
+        /// </summary>
+        /// <param name="sender">DataGridView</param>
+        /// <param name="e">DataGridViewCellEventArgs</param>
         void dgvStreams_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
             // only DataGridView allowed in here because we are racist!
@@ -779,17 +825,17 @@ namespace twitch_stream_check
             {
                 try {
                     senderGrid.Rows.RemoveAt(e.RowIndex);
-//                    senderGrid.Refresh();
                 } catch (Exception ex) {
                     Log.Add("dgvStreams_CellContentClick>" + ex.Message);
                 }
             }
         }
         
+        /// <summary>
+        /// Enter default settings values if non have been loaded
+        /// </summary>
         public void putDefaultSettings()
         {
-            // population of default data moved to putDefaultSettings() to avoid getting extra List entries on Load
-            
             if (settings.checkinterval == 0 || settings.checkinterval < 1) {
                 settings.checkinterval = 5;
             }
@@ -800,8 +846,9 @@ namespace twitch_stream_check
             
             // add default entries when list is empty
             if (settings.streams == null) {
-//                string[] streamers = new string[] {"Autositz", "DRUCKWELLETV", "Garrynewman", "Denkii"};
-                string[] streamers = new string[] {"Entry 1", "Entry 2", "Entry 3", "Entry 4"};
+                // FIXME RELEASE: set default streams
+                string[] streamers = new string[] {"Autositz", "DRUCKWELLETV", "Garrynewman", "Denkii"};
+//                string[] streamers = new string[] {"Entry 1", "Entry 2", "Entry 3", "Entry 4"};
                 settings.streams = new List<twStream>();
                 foreach (string s in streamers) {
                     twStream s2 = new twStream();
@@ -811,70 +858,6 @@ namespace twitch_stream_check
                 }
             }
             
-        }
-        
-        /// <summary>
-        /// Settings definition
-        /// </summary>
-        class MySettings : AppSettings<MySettings>
-        {
-//            public DataTable checkusers;
-//            public string[] checkusers2;
-            public int checkinterval;
-            public string checkaccount;
-            public IList<twStream> streams;
-            
-            public MySettings()
-            {
-                // population of default data moved to putDefaultSettings() to avoid getting extra List entries on Load
-                
-#if _OLDDEFAULT
-                checkinterval = 1;
-                checkaccount = "Account";
-                
-                // old settings
-                checkusers2 = new string[] {"Autositz", "DRUCKWELLETV", "Garrynewman", "Denkii"};
-                
-                // new settings
-//                checkusers = new DataTable("Streams");
-//                DataColumn dcImportant = new DataColumn();
-//                dcImportant.DataType = Type.GetType("System.Boolean");
-//                dcImportant.Caption = "!";
-//                dcImportant.ColumnName = "bImportant";
-//                dcImportant.DefaultValue = false;
-//                DataColumn dcStream = new DataColumn();
-//                dcStream.DataType = Type.GetType("System.String");
-//                dcStream.Caption = "Stream names";
-//                dcStream.ColumnName = "sStreamname";
-//                dcStream.DefaultValue = "";
-//                
-//                checkusers.Columns.AddRange(new DataColumn[] {
-//                                            dcImportant,
-//                                            dcStream});
-//                
-//                // add default values
-//                if (checkusers.Rows.Count < 1) {
-//                    foreach (string s in checkusers2) {
-//                        DataRow drTMP = checkusers.NewRow();
-//                        drTMP["bImportant"] = true;
-//                        drTMP["sStreamname"] = s;
-//                        checkusers.Rows.Add(drTMP);
-//                    }
-//                }
-                
-                // add default entries when list is empty
-                if (streams == null) {
-                    streams = new List<twStream>();
-                    foreach (string s in checkusers2) {
-                        twStream s2 = new twStream();
-                        s2.bImportant= true;
-                        s2.sStreamname = s;
-                        streams.Add(s2);
-                    }
-                }
-                
-#endif
-            }
         }
         
         public int GetNthIndex(string sText, string sSearch, int iOccurred)
@@ -915,111 +898,6 @@ namespace twitch_stream_check
         }
     }
     
-    /// <summary>
-    /// Class to handle settings load and save
-    /// </summary>
-    public class AppSettings<T> where T : new()
-    {
-        private const string DEFAULT_FILENAME = "twitch-stream-check-settings.json";
-        
-        public void Save(object obj)
-        {
-            File.WriteAllText("bla.json", JsonConvert.SerializeObject(obj));
-        }
-        /// <summary>
-        /// Store settings into file
-        /// </summary>
-        /// <param name="fileName">Configfile</param>
-        public void Save(string fileName = DEFAULT_FILENAME)
-        {
-            Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGS:SAVE: Data save initialized - using self");
-            File.WriteAllText(fileName, JsonConvert.SerializeObject(this));
-        }
-        
-        /// <summary>
-        /// Store supplied settings into file
-        /// </summary>
-        /// <param name="pSettings">Settings class</param>
-        /// <param name="fileName">Configfile</param>
-        public static void Save(T pSettings, string fileName = DEFAULT_FILENAME)
-        {
-            Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGS:SAVE: Data save initialized - with given object");
-            File.WriteAllText(fileName, JsonConvert.SerializeObject(pSettings));
-        }
-        
-        /// <summary>
-        /// Load settings from config file
-        /// </summary>
-        /// <param name="fileName">Configfile</param>
-        /// <returns>Returns the settings class with loaded settings</returns>
-        public static T Load(string fileName = DEFAULT_FILENAME)
-        {
-            // TODO: Check if loaded data matches current settings in datatypes?
-            Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGS:LOAD: Data load initialized");
-            T t = new T();
-            try {
-                if (File.Exists(fileName)) {
-                    Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGS:LOAD: Convert our loaded data into an useable object");
-                    t = JsonConvert.DeserializeObject<T>(File.ReadAllText(fileName));
-                }
-            } catch (Exception ex) {
-                Debug.WriteLineIf(GlobalVar.DEBUG, "!EXCEPTION!:SETTINGS:LOAD: Something went wrong during load: " + ex.Message);
-                MessageBox.Show("Error loading settings." + Environment.NewLine + "Using default values", "Info", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1);
-                Logging Log = new Logging();
-                Log.Add("AppSettings:Load>" + ex.Message);
-            }
-            return t;
-        }
-    }
-    
-    public class Logging
-    {
-        private string sAppname; // name of current active application
-        
-        public Logging()
-        {
-            // get filename to use for logging
-            try {
-                sAppname = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            } catch (Exception) {
-                sAppname = "twitch-stream-check";
-            }
-        }
-        
-        public void Add(string sLine)
-        {
-            sLine = DateTime.Now.ToString("yyMMdd-HHmmss: ") + sLine;
-            // add to existing file or create new with the application name
-            try {
-                StreamWriter file = new StreamWriter(sAppname + ".log", true);
-                file.WriteLine(sLine);
-                file.Close();
-            } catch (Exception ex) {
-                // show the user that there was an error and we were also unable to write to the error log
-                MessageBox.Show(sLine + Environment.NewLine + Environment.NewLine +
-                                "Error while trying to write to error log:" + Environment.NewLine + ex.Message + Environment.NewLine + Environment.NewLine +
-                                "Application will now exit!" + Environment.NewLine + Environment.NewLine +
-                                "Please report this error at" + Environment.NewLine + GlobalVar.PROJECTURL, "ERROR", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1);
-                Environment.Exit(0);
-            }
-        }
-    }
-    
-    /// <summary>
-    /// Class for each single stream entry
-    /// </summary>
-    public class twStream
-    {
-        public bool bImportant { get; set; }
-        public string sStreamname { get; set; }
-        
-        public twStream()
-        {
-            bImportant = false;
-            sStreamname = "";
-        }
-    }
-    
     public class twDataGridViewButtonColumn : DataGridViewButtonColumn
     {
         public override DataGridViewCellStyle DefaultCellStyle {
@@ -1032,15 +910,5 @@ namespace twitch_stream_check
                 base.DefaultCellStyle = value;
             }
         }
-    }
-    
-    /// <summary>
-    /// Holds static global variables
-    /// </summary>
-    public static class GlobalVar
-    {
-        public const bool DEBUG = true; // enable or disable debug messages
-        public const bool GENERATEDATA = true; // generate random data (add/remove entries randomly)
-        public const string PROJECTURL = "https://github.com/Autositz/twitch-stream-check/issues"; // link to the project page to report errors
     }
 }
