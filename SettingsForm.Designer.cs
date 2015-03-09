@@ -14,11 +14,6 @@ namespace twitch_stream_check
         /// Designer variable used to keep track of non-visual components.
         /// </summary>
         private System.ComponentModel.IContainer components = null;
-        private System.Windows.Forms.NotifyIcon notifyIcon1;
-        private System.Windows.Forms.ContextMenuStrip MyMenu;
-        private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
-        private System.Windows.Forms.ToolStripMenuItem aboutToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Button buttonSettingsGetUsers;
         private System.Windows.Forms.Label label1;
@@ -26,7 +21,6 @@ namespace twitch_stream_check
         private System.Windows.Forms.Button buttonSettingsCANCEL;
         private System.Windows.Forms.Button buttonSettingsOK;
         private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem1;
         private System.Windows.Forms.TextBox textBoxAccountCheck;
         private System.Windows.Forms.LinkLabel linkLabelFeedback;
         private System.Windows.Forms.DataGridView dgvStreams;
@@ -67,14 +61,8 @@ namespace twitch_stream_check
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SettingsForm));
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
-            this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
-            this.MyMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-            this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
-            this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SettingsForm));
             this.label1 = new System.Windows.Forms.Label();
             this.buttonSettingsGetUsers = new System.Windows.Forms.Button();
             this.label2 = new System.Windows.Forms.Label();
@@ -99,58 +87,12 @@ namespace twitch_stream_check
             this.comboBoxIntervalImportant = new System.Windows.Forms.ComboBox();
             this.label8 = new System.Windows.Forms.Label();
             this.label7 = new System.Windows.Forms.Label();
-            this.MyMenu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvStreams)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.bsStreams)).BeginInit();
             this.groupBoxStreamSettings.SuspendLayout();
             this.groupBoxChannelsFollowing.SuspendLayout();
             this.groupBoxIntervalSettings.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // notifyIcon1
-            // 
-            this.notifyIcon1.ContextMenuStrip = this.MyMenu;
-            this.notifyIcon1.Icon = ((System.Drawing.Icon)(resources.GetObject("notifyIcon1.Icon")));
-            this.notifyIcon1.Text = "Twitch Stream Checker";
-            this.notifyIcon1.Visible = true;
-            // 
-            // MyMenu
-            // 
-            this.MyMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.toolStripSeparator1,
-            this.toolStripMenuItem1,
-            this.aboutToolStripMenuItem,
-            this.exitToolStripMenuItem});
-            this.MyMenu.Name = "notifyIconMenu";
-            this.MyMenu.Size = new System.Drawing.Size(117, 76);
-            // 
-            // toolStripSeparator1
-            // 
-            this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(113, 6);
-            // 
-            // toolStripMenuItem1
-            // 
-            this.toolStripMenuItem1.Name = "toolStripMenuItem1";
-            this.toolStripMenuItem1.Size = new System.Drawing.Size(116, 22);
-            this.toolStripMenuItem1.Text = "Settings";
-            this.toolStripMenuItem1.ToolTipText = "Configure program behavior";
-            this.toolStripMenuItem1.Click += new System.EventHandler(this.ToolStripMenuItemClickSettings);
-            // 
-            // aboutToolStripMenuItem
-            // 
-            this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(116, 22);
-            this.aboutToolStripMenuItem.Text = "About";
-            this.aboutToolStripMenuItem.ToolTipText = "Tell me more";
-            this.aboutToolStripMenuItem.Click += new System.EventHandler(this.ToolStripMenuItemClickAbout);
-            // 
-            // exitToolStripMenuItem
-            // 
-            this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(116, 22);
-            this.exitToolStripMenuItem.Text = "Exit";
-            this.exitToolStripMenuItem.Click += new System.EventHandler(this.ToolStripMenuItemClickExit);
             // 
             // label1
             // 
@@ -461,14 +403,13 @@ namespace twitch_stream_check
             this.Controls.Add(this.linkLabelFeedback);
             this.Controls.Add(this.buttonSettingsCANCEL);
             this.Controls.Add(this.buttonSettingsOK);
-            this.Icon = this.notifyIcon1.Icon;
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "SettingsForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Settings";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.SettingsForm_FormClosing);
-            this.MyMenu.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.dgvStreams)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.bsStreams)).EndInit();
             this.groupBoxStreamSettings.ResumeLayout(false);

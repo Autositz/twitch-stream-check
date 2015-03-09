@@ -50,34 +50,15 @@ namespace twitch_stream_check
                 // this has to be one of the earliest things...
                 AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
                 
-                
-                
-                System.Timers.Timer tMainTimer = new System.Timers.Timer();
-                tMainTimer.Interval = 1500; // uncomment this for faster cycles on small entries
-                // redo associated actions
-                tMainTimer.AutoReset = true;
-                // set the action we want to do at the given interval
-                tMainTimer.Elapsed += new System.Timers.ElapsedEventHandler(Program.test);
-                // make sure the timer is starting
-                tMainTimer.Enabled = true; // enable timer
-                // prevent form from being displayed at startup
-                SettingsForm objSettingsForm = new SettingsForm();
-                MySettings settings = new MySettings();
-                settings = objSettingsForm.Start();
+                MainForm objMainForm = new MainForm();
+                objMainForm.Hide();
                 
                 Application.Run();
                 
-                // clear up what we used
-                objSettingsForm.Dispose();
+                objMainForm.Dispose();
             }
             
         }
-        
-        private static void test(object sender, EventArgs e)
-        {
-            
-        }
-        
         
         static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
         {

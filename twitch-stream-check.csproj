@@ -76,6 +76,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MainForm.cs" />
+    <Compile Include="MainForm.Designer.cs">
+      <DependentUpon>MainForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="SettingsForm.cs" />
     <Compile Include="SettingsForm.Designer.cs">
       <DependentUpon>SettingsForm.cs</DependentUpon>
@@ -85,6 +89,9 @@
     <Compile Include="Functions.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="MainForm.resx">
+      <DependentUpon>MainForm.cs</DependentUpon>
+    </EmbeddedResource>
     <None Include="app.config" />
     <EmbeddedResource Include="Newtonsoft.Json.dll" />
     <None Include="CHANGELOG.txt" />

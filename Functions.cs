@@ -4,14 +4,19 @@
 
 
 using System;
-using System.IO;
-using System.Text;
-using System.Reflection;
 using System.Collections;
-using System.Windows.Forms;
-using System.Diagnostics;
-using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Data;
+using System.Diagnostics;
+using System.Drawing;
+using System.IO;
+using System.Net;
+using System.Reflection;
+using System.Text;
+using System.Threading.Tasks;
+using System.Timers;
+using System.Windows.Forms;
+using Newtonsoft.Json;
 
 namespace twitch_stream_check
 {
@@ -125,63 +130,160 @@ namespace twitch_stream_check
           
             return result.ToString();
         }
-    }
-    
-    /// <summary>
-    /// Log to file
-    /// </summary>
-    public class Logging
-    {
-        /// <summary>
-        /// Name of current active application
-        /// </summary>
-        private string sAppname;
         
-        public Logging()
+        /// <summary>
+        /// Tries to get more detailed info on the exception
+        /// </summary>
+        /// <param name="e">Supply the Exception that has occured.</param>
+        /// <returns>Returns object: 0 Line number, 1 Column number, 2 Filename, 3 Methodname</returns>
+        public static object[] ParseException(Exception ex)
         {
-            // get filename to use for logging
-            try {
-                sAppname = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            } catch (Exception) {
-                sAppname = "twitch-stream-check";
-            }
+            object[] data = { 0, 0, "", "" }; // <int>line, <int>column, <string>filename, <string>methodname
+            
+            //Get a StackTrace object for the exception
+            StackTrace st = new StackTrace(ex, true);
+        
+            //Get the first stack frame
+            StackFrame frame = st.GetFrame(0);
+        
+            //Get the file name
+            data[2] = frame.GetFileName();
+        
+            //Get the method name
+            data[3] = frame.GetMethod().Name;
+        
+            //Get the line number from the stack frame
+            data[0] = frame.GetFileLineNumber();
+        
+            //Get the column number
+            data[1] = frame.GetFileColumnNumber();
+            
+            return data;
         }
         
         /// <summary>
-        /// Write content to file
+        /// Convert the settings dialog data to settings save data.
         /// </summary>
-        /// <param name="sLine">What to write</param>
-        public void Add(string sLine)
+        /// <param name="s">String with linefeeds to be converted</param>
+        /// <returns>String Array</returns>
+        public static String[] convertLFtoArray(String s)
         {
-            sLine = DateTime.Now.ToString("yyMMdd-HHmmss: ") + sLine;
-            // add to existing file or create new with the application name
+            Debug.WriteLineIf(GlobalVar.DEBUG, "CONVERTLFTOARRAY: Convert a string with newlines to an array that splits at newlines");
+            return s.Split(new string[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
+        }
+        
+        /// <summary>
+        /// Convert the settings savefile data to settings dialog output.
+        /// </summary>
+        /// <param name="a">String Array to be merged</param>
+        /// <returns>String with line feeds</returns>
+        public static String convertArraytoLF(String[] a)
+        {
+            Debug.WriteLineIf(GlobalVar.DEBUG, "CONVERTARRAYTOLF: Convert an array to string with newlines");
+            return string.Join(Environment.NewLine, a);
+        }
+        
+        /// <summary>
+        /// Clear any non-alphanumeric from text with the option to clear or preserve newlines.
+        /// </summary>
+        /// <param name="s">String to be checked</param>
+        /// <param name="preserveNewline">Keep new lines or strip them too</param>
+        /// <returns>Cleaned string</returns>
+        public static string convertAlphaNum(string s, bool preserveNewline= false)
+        {
+            Debug.WriteLineIf(GlobalVar.DEBUG, "CONVERTALPHANUM: Converting text string to contain only valid chars with by preserving newline: " + preserveNewline);
+            char[] arr = s.ToCharArray();
+            
+            if (preserveNewline) {
+                arr = Array.FindAll<char>(arr, (c => (char.IsLetterOrDigit(c) || c == '\n' || c == '\r' || c == '_')));
+            } else {
+                arr = Array.FindAll<char>(arr, (c => (char.IsLetterOrDigit(c) || c == '_')));
+            }
+            
+            String str = new string(arr);
+            
+            return str;
+        }
+        
+        /// <summary>
+        /// Clear any non-numeric from text with fallback integer value
+        /// </summary>
+        /// <param name="s">String to be converted to an int</param>
+        /// <param name="iFallback">Integer value to be used when conversion fails</param>
+        /// <returns>Converted Integer or Fallback value</returns>
+        public static int convertNum(string s, int iFallback = 0)
+        {
+            Debug.WriteLineIf(GlobalVar.DEBUG, "CONVERTNUM: Converting " + s + " with fallback: " + iFallback);
+            int i = 0;
+            if (!Int32.TryParse(s, out i)) {
+                i = iFallback;
+            }
+            
+            return i;
+        }
+        
+        public static int GetNthIndex(string sText, string sSearch, int iOccurred)
+        {
+            return GetNthIndex(sText, sSearch, iOccurred, 0, 1);
+        }
+        /// <summary>
+        /// Finds the position of the Nth occurrance of Search in Text
+        /// </summary>
+        /// <param name="sText"></param>
+        /// <param name="sSearch"></param>
+        /// <param name="iOccurred">int </param>
+        /// <param name="iPos"></param>
+        /// <param name="iRunning"></param>
+        /// <returns>Position of the Nth Occurrance</returns>
+        public static int GetNthIndex(string sText, string sSearch, int iOccurred, int iPos, int iRunning)
+        {
+            int iRet = -1;
+            // search index, increase starting point and interval if something was found
+            Debug.WriteLineIf(GlobalVar.DEBUG, "GETNTHINDEX: Starting search at \""+iPos+"\" for \""+sSearch+"\" in \""+sText+"\"");
+            iPos = sText.IndexOf(sSearch, iPos);
+            Debug.WriteLineIf(GlobalVar.DEBUG, "GETNTHINDEX: Found entry at: " + iPos);
+            // we are in the depth we need
+            if (iRunning == iOccurred)
+            {
+                Debug.WriteLineIf(GlobalVar.DEBUG, "GETNTHINDEX: We found the "+iOccurred+" occurance at: "+iPos);
+                iRet = iPos;
+            } else
+            {
+                Debug.WriteLineIf(GlobalVar.DEBUG, "GETNTHINDEX: Doing another round: " + iRunning);
+                iRunning++; // increase by one to know how often we have run
+                iPos++; // increase by one to find the same entry again
+                iRet = GetNthIndex(sText, sSearch, iOccurred, iPos, iRunning);
+            }
+            
+            
+            return iRet;
+        }
+        
+        /// <summary>
+        /// Get data from an URL
+        /// </summary>
+        /// <param name="sURL">URL to contact</param>
+        /// <returns>Returns true if request was successfull</returns>
+        public static WebCheckResponse doWebRequest(string sURL)
+        {
+            WebCheckResponse WebCheck = new WebCheckResponse();
+            
             try {
-                StreamWriter file = new StreamWriter(sAppname + ".log", true);
-                file.WriteLine(sLine);
-                file.Close();
+                Debug.WriteLineIf(GlobalVar.DEBUG, "DOWEBREQUEST: Making a new Web Request");
+                HttpWebRequest HttpWReq = (HttpWebRequest)WebRequest.Create(sURL);
+                Debug.WriteLineIf(GlobalVar.DEBUG, "DOWEBREQUEST: Putting response into var");
+                WebCheck.HttpWResp = (HttpWebResponse)HttpWReq.GetResponse();
+                Debug.WriteLineIf(GlobalVar.DEBUG, "DOWEBREQUEST: Response stored for future use");
+                
+                if (WebCheck.HttpWResp.StatusCode == HttpStatusCode.OK) {
+                }
+                    
             } catch (Exception ex) {
-                // show the user that there was an error and we were also unable to write to the error log
-                MessageBox.Show(sLine + Environment.NewLine + Environment.NewLine +
-                                "Error while trying to write to error log:" + Environment.NewLine + ex.Message + Environment.NewLine + Environment.NewLine +
-                                "Application will now exit!" + Environment.NewLine + Environment.NewLine +
-                                "Please report this error at" + Environment.NewLine + GlobalVar.PROJECTURL, "ERROR", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1);
-                Environment.Exit(0);
+                Logging Log = new Logging();
+                Log.Add("doWebRequest>" + ex.Message);
             }
-        }
-    }
-    
-    /// <summary>
-    /// Settings definition
-    /// </summary>
-    public class MySettings : AppSettings<MySettings>
-    {
-        public int checkinterval;
-        public string checkaccount;
-        public IList<twStream> streams;
-        
-        public MySettings()
-        {
-            // population of default data moved to putDefaultSettings() to avoid getting extra List entries on Load
+            
+            return WebCheck;
         }
     }
     
@@ -243,17 +345,60 @@ namespace twitch_stream_check
     }
     
     /// <summary>
+    /// Log to file
+    /// </summary>
+    public class Logging
+    {
+        /// <summary>
+        /// Name of current active application
+        /// </summary>
+        private string sAppname;
+        
+        public Logging()
+        {
+            // get filename to use for logging
+            try {
+                sAppname = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            } catch (Exception) {
+                sAppname = "twitch-stream-check";
+            }
+        }
+        
+        /// <summary>
+        /// Write content to file
+        /// </summary>
+        /// <param name="sLine">What to write</param>
+        public void Add(string sLine)
+        {
+            sLine = DateTime.Now.ToString("yyMMdd-HHmmss: ") + sLine;
+            // add to existing file or create new with the application name
+            try {
+                StreamWriter file = new StreamWriter(sAppname + ".log", true);
+                file.WriteLine(sLine);
+                file.Close();
+            } catch (Exception ex) {
+                // show the user that there was an error and we were also unable to write to the error log
+                MessageBox.Show(sLine + Environment.NewLine + Environment.NewLine +
+                                "Error while trying to write to error log:" + Environment.NewLine + ex.Message + Environment.NewLine + Environment.NewLine +
+                                "Application will now exit!" + Environment.NewLine + Environment.NewLine +
+                                "Please report this error at" + Environment.NewLine + GlobalVar.PROJECTURL, "ERROR", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1);
+                Environment.Exit(0);
+            }
+        }
+    }
+    
+    /// <summary>
     /// Class for each single stream entry
     /// </summary>
-    public class twStream
+    public class WebCheckResponse
     {
-        public bool bImportant { get; set; }
-        public string sStreamname { get; set; }
+        public bool bSuccess { get; set; }
+        public HttpWebResponse HttpWResp { get; set; }
         
-        public twStream()
+        public WebCheckResponse()
         {
-            bImportant = false;
-            sStreamname = "";
+            bSuccess = false;
+            HttpWResp = null;
         }
     }
     
