@@ -7,8 +7,6 @@
  * To change this template use Tools | Options | Coding | Edit Standard Headers.
  */
 
-//#define _HACK
-
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -52,6 +50,7 @@ namespace twitch_stream_check
             //
             InitializeComponent();
             objMainForm = mainform; // make mainform accessible from settings form
+            this.CreateControl();
             
             // try to hide the form on startup
             this.Hide();

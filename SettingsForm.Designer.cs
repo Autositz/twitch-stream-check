@@ -403,6 +403,7 @@ namespace twitch_stream_check
             this.Controls.Add(this.linkLabelFeedback);
             this.Controls.Add(this.buttonSettingsCANCEL);
             this.Controls.Add(this.buttonSettingsOK);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Fixed3D;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
             this.MinimizeBox = false;

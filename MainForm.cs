@@ -6,6 +6,9 @@
  * 
  * To change this template use Tools | Options | Coding | Edit Standard Headers.
  */
+
+//#define _HACK
+
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -41,7 +44,7 @@ namespace twitch_stream_check
         /// <summary>
         /// The running number of the current check
         /// </summary>
-        private int iCurrentCheck;
+        private int _iCurrentCheck;
         /// <summary>
         /// Current number of streamlist entries to check
         /// </summary>
@@ -51,9 +54,26 @@ namespace twitch_stream_check
         /// </summary>
         private int _iActiveStreams;
         /// <summary>
-        /// Background timer to call events
+        /// Time in seconds until the next check will start
         /// </summary>
-        private System.Timers.Timer tBackgroundTimer;
+        private int _iNextCheck;
+        /// <summary>
+        /// Background timer to check streams
+        /// </summary>
+        private System.Timers.Timer tStreamsTimer;
+        private DateTime tStreamsTimerLastStart;
+        /// <summary>
+        /// Background timer to check streams
+        /// </summary>
+        private System.Timers.Timer tToolTipTimer;
+        /// <summary>
+        /// Start delay timer
+        /// </summary>
+        private System.Timers.Timer tStartDelayTimer;
+        /// <summary>
+        /// Set to true once the last step of initialization is done
+        /// </summary>
+        private bool bReady;
         /// <summary>
         /// Use logging for exceptions
         /// </summary>
@@ -66,6 +86,10 @@ namespace twitch_stream_check
             //
             InitializeComponent();
             
+            // Create controls so Invoke won't complain later
+            this.CreateControl();
+            MyMenu.CreateControl();
+            
             //
             // TODO: Add constructor code after the InitializeComponent() call.
             //
@@ -73,13 +97,6 @@ namespace twitch_stream_check
             
             // load error logging
             this.Log = new Logging();
-            
-            // set the check value if a check is currently running
-            bGettingData = false;
-            iCurrentCheck = 0;
-            iMaxCheck = 0;
-            iActiveStreams = 0;
-            
             
             System.Timers.Timer tMainTimer = new System.Timers.Timer();
             tMainTimer.Interval = 1500; // uncomment this for faster cycles on small entries
@@ -98,21 +115,39 @@ namespace twitch_stream_check
             putDefaultSettings();
 //            settings = Program.objSettingsForm.Start(); // really needed at start?
             
+            // set the check value if a check is currently running
+            bGettingData = false;
+            iCurrentCheck = 0;
+            iMaxCheck = 0;
+            iActiveStreams = 0;
             
             
             // create a new timer to run stuff at given interval
-            tBackgroundTimer = new System.Timers.Timer();
+            tStreamsTimer = new System.Timers.Timer();
             // FIXME RELEASE: Make sure to set checkinterval timer for release!
             // start timer with 1000ms * 60s * interval-minutes
-            tBackgroundTimer.Interval = (settings.checkinterval * 60 * 1000);
-//            tBackgroundTimer.Interval = 5000; // uncomment this for faster cycles on small entries
+            tStreamsTimer.Interval = (settings.checkinterval * 60 * 1000);
+//            tStreamsTimer.Interval = 15000; // uncomment this for faster cycles on small entries
             // redo associated actions
-            tBackgroundTimer.AutoReset = true;
+            tStreamsTimer.AutoReset = true;
             // set the action we want to do at the given interval
-            tBackgroundTimer.Elapsed += new ElapsedEventHandler(doTimer);
+            tStreamsTimer.Elapsed += new ElapsedEventHandler(doTimer);
             // make sure the timer is starting
-            tBackgroundTimer.Enabled = true; // enable timer
+            tStreamsTimer.Enabled = true; // enable timer
+            tStreamsTimerLastStart = DateTime.Now;
             
+            
+            tToolTipTimer = new System.Timers.Timer();
+            tToolTipTimer.Interval = 1000;
+            tToolTipTimer.AutoReset = true;
+            tToolTipTimer.Elapsed += new ElapsedEventHandler(CheckNextTime);
+            tToolTipTimer.Enabled = true;
+            
+//            tStartDelayTimer = new System.Timers.Timer();
+//            tStartDelayTimer.Interval = 5000;
+//            tStartDelayTimer.AutoReset = false;
+//            tStartDelayTimer.Elapsed += new ElapsedEventHandler(StartDelay);
+//            tStartDelayTimer.Enabled = true;
             
             // clear up what we used
 //            Program.objSettingsForm.Dispose(); // really needed at start?
@@ -124,9 +159,26 @@ namespace twitch_stream_check
         void doTimer(object sender, EventArgs e)
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "DOTIMER: Timer called us");
+            tStreamsTimerLastStart = DateTime.Now;
             Task.Factory.StartNew(checkStreams);
-            
         }
+        
+        void CheckNextTime (object sender, EventArgs e)
+        {
+            updateToolTip();
+        }
+        
+        /// <summary>
+        /// Start ToolTip updates only if other things have finished initializing
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+//        void StartDelay (object sender, EventArgs e)
+//        {
+//            
+//            tStartDelayTimer.Enabled = false;
+//            tStartDelayTimer.Dispose();
+//        }
         
         private static void test(object sender, EventArgs e)
         {
@@ -177,8 +229,9 @@ namespace twitch_stream_check
         
         public void SetTimer(int iTimer)
         {
-            tBackgroundTimer.Interval = iTimer * 60 * 1000;
-            Debug.WriteLineIf(GlobalVar.DEBUG, "SETTIMER: Set new interval to: " + tBackgroundTimer.Interval + " ms");
+            tStreamsTimer.Interval = iTimer * 60 * 1000;
+            tStreamsTimerLastStart = DateTime.Now;
+            Debug.WriteLineIf(GlobalVar.DEBUG, "SETTIMER: Set new interval to: " + tStreamsTimer.Interval + " ms");
         }
         
         /// <summary>
@@ -277,11 +330,32 @@ namespace twitch_stream_check
                 return (bool)this.Invoke ((Func<bool>)updateToolTip);
             
             string s = "";
+            int iMin = 0;
+            int iSec = 0;
             // display info when we are currently running an update
             if (bGettingData) {
                 s = iActiveStreams + " active Streams (Updating " + iCurrentCheck + "/" + iMaxCheck + ")";
             } else {
-                s = iActiveStreams + " active Streams";
+                try {
+                    TimeSpan t = TimeSpan.FromSeconds(settings.checkinterval * 60) - (DateTime.Now - tStreamsTimerLastStart);
+                    iMin = t.Minutes; // how many minutes
+                    iSec = t.Seconds; // how many seconds
+                } catch (Exception ex) {
+                    // possible division by zero
+                    Log.Add("updateToolTip>" + ex.Message);
+                }
+                if ((iMin > 0) && (iSec > 0)) {
+                    s = iActiveStreams + " active Streams - next check in " + iMin + "m " + iSec + "s";
+                } else if ((iMin > 0) && (iSec == 0))
+                {
+                    s = iActiveStreams + " active Streams - next check in " + iMin + "m";
+                } else if ((iMin == 0) && (iSec > 0))
+                {
+                    s = iActiveStreams + " active Streams - next check in " + iSec + "s";
+                } else
+                {
+                    s = iActiveStreams + " active Streams";
+                }
             }
             notifyIcon1.Text = s;
 //            MyMenu.Invoke((MethodInvoker) delegate {notifyIcon1.Text = s;});
@@ -440,7 +514,9 @@ namespace twitch_stream_check
                     Log.Add("checkStreams>" + ex.Message);
                 }
                 
+                // bGettingData needs to be set to false first so iCurrentCheck update will work correctly
                 bGettingData = false;
+                iCurrentCheck = 0;
             } else {
                 Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKSTREAMS: Another check is still running..." + iCurrentCheck + "/" + iMaxCheck);
                 // FIXME RELEASE: Make sure to have this enabled for release! So users get a warning when their list can't be processed in between intervals.
@@ -457,6 +533,28 @@ namespace twitch_stream_check
             get{ return _iActiveStreams; }
             set {
                 _iActiveStreams = value;
+                updateToolTip();
+            }
+        }
+        
+        /// <summary>
+        /// Wrapper to update ToolTip everytime the streamer count changes
+        /// </summary>
+        public int iCurrentCheck {
+            get{ return _iCurrentCheck; }
+            set {
+                _iCurrentCheck = value;
+                updateToolTip();
+            }
+        }
+        
+        /// <summary>
+        /// Wrapper to update ToolTip everytime the streamer count changes
+        /// </summary>
+        public int iNextCheck {
+            get{ return _iNextCheck; }
+            set {
+                _iNextCheck = value;
                 updateToolTip();
             }
         }
