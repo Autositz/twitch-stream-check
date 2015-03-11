@@ -165,8 +165,8 @@ namespace twitch_stream_check
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(258, 42);
             this.label3.TabIndex = 7;
-            this.label3.Text = "Interval at which streams are checked (m)\r\nKeep in mind that the timer is RESET e" +
-    "verytime the settings are saved!";
+            this.label3.Text = "Interval at which streams are checked (m)\r\nKeep in mind that the timer is RESET w" +
+    "hen changing the value and saving!";
             // 
             // buttonSettingsOK
             // 

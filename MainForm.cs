@@ -316,11 +316,18 @@ namespace twitch_stream_check
                 Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYCREATE: Created new MenuItem");
                 // add the new stream on top of the menu
                 try {
-                    MyMenu.Invoke((MethodInvoker) delegate {
-                                      lock (MyMenu) {
-                                          MyMenu.Items.Insert(0, tsiNewItem);
-                                      }
-                                  });
+                    if (InvokeRequired) {
+                        MyMenu.Invoke((MethodInvoker)delegate {
+                            lock (MyMenu) {
+                                MyMenu.Items.Insert(0, tsiNewItem);
+                            }
+                        });
+                    } else {
+                        lock (MyMenu) {
+                            MyMenu.Items.Insert(0, tsiNewItem);
+                        }
+                    }
+                    
 //                    MyMenu.Items.Insert(0, tsiNewItem);
                     bRet = true;
                     // increase active streams number only when we are really adding a new one
@@ -353,24 +360,43 @@ namespace twitch_stream_check
             
             Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Remove menu entry for stream: " + sUser);
             bool bRet = false;
-            MyMenu.Invoke((MethodInvoker) delegate {
-                              Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Locking MyMenu");
-                              lock (MyMenu) {
-                                  int iMenuIDX = MyMenu.Items.IndexOfKey(sUser);
-                                  Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Menu index: " + iMenuIDX);
+            if (InvokeRequired) {
+                MyMenu.Invoke((MethodInvoker)delegate {
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Locking MyMenu");
+                    lock (MyMenu) {
+                        int iMenuIDX = MyMenu.Items.IndexOfKey(sUser);
+                        Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Menu index: " + iMenuIDX);
                                   
                                   
-                                  if (iMenuIDX != -1) {
-                                      Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Entry found at: " + iMenuIDX);
-                                      notifyIcon1.ShowBalloonTip(750, "Stream is Offline", sUser, ToolTipIcon.Info);
-                                                            MyMenu.Items.RemoveAt(iMenuIDX);
+                        if (iMenuIDX != -1) {
+                            Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Entry found at: " + iMenuIDX);
+                            notifyIcon1.ShowBalloonTip(750, "Stream is Offline", sUser, ToolTipIcon.Info);
+                            MyMenu.Items.RemoveAt(iMenuIDX);
 //                                      MyMenu.Items.RemoveAt(iMenuIDX);
-                                      bRet = true;
-                                      // decrease active streams number only when we are really removing an entry
-                                      iActiveStreams--;
-                                  }
-                              }
-                          });
+                            bRet = true;
+                            // decrease active streams number only when we are really removing an entry
+                            iActiveStreams--;
+                        }
+                    }
+                });
+            } else {
+                Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Locking MyMenu");
+                lock (MyMenu) {
+                    int iMenuIDX = MyMenu.Items.IndexOfKey(sUser);
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Menu index: " + iMenuIDX);
+                              
+                              
+                    if (iMenuIDX != -1) {
+                        Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Entry found at: " + iMenuIDX);
+                        notifyIcon1.ShowBalloonTip(750, "Stream is Offline", sUser, ToolTipIcon.Info);
+                        MyMenu.Items.RemoveAt(iMenuIDX);
+//                                      MyMenu.Items.RemoveAt(iMenuIDX);
+                        bRet = true;
+                        // decrease active streams number only when we are really removing an entry
+                        iActiveStreams--;
+                    }
+                }
+            }
             
             
             Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: END");
