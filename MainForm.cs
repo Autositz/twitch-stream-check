@@ -67,13 +67,17 @@ namespace twitch_stream_check
         /// </summary>
         private System.Timers.Timer tToolTipTimer;
         /// <summary>
-        /// Start delay timer
+        /// Check own account
         /// </summary>
-        private System.Timers.Timer tStartDelayTimer;
+        private System.Timers.Timer tAccountTimer;
         /// <summary>
-        /// Set to true once the last step of initialization is done
+        /// True if own account is currently online
         /// </summary>
-        private bool bReady;
+        private bool bAccountOnline;
+        /// <summary>
+        /// Holds data to add at end of tooltip if account is online
+        /// </summary>
+        private string sAccountOnlineData;
         /// <summary>
         /// Use logging for exceptions
         /// </summary>
@@ -98,21 +102,18 @@ namespace twitch_stream_check
             // load error logging
             this.Log = new Logging();
             
-            System.Timers.Timer tMainTimer = new System.Timers.Timer();
-            tMainTimer.Interval = 1500; // uncomment this for faster cycles on small entries
-            // redo associated actions
-            tMainTimer.AutoReset = true;
-            // set the action we want to do at the given interval
-            tMainTimer.Elapsed += new System.Timers.ElapsedEventHandler(MainForm.test);
-            // make sure the timer is starting
-            tMainTimer.Enabled = true; // enable timer
+            tAccountTimer = new System.Timers.Timer();
+            tAccountTimer.Interval = 23000;
+            tAccountTimer.AutoReset = true;
+            tAccountTimer.Elapsed += new System.Timers.ElapsedEventHandler(CheckAccount);
+            tAccountTimer.Enabled = true; // enable timer
             
 //            Program.objSettingsForm = new SettingsForm(); // really needed at start?
             
 //            settings = new MySettings();
             // load stored settings from file and check if default values need to be put in
             settings = MySettings.Load();
-            putDefaultSettings();
+            SetDefaultSettings();
 //            settings = Program.objSettingsForm.Start(); // really needed at start?
             
             // set the check value if a check is currently running
@@ -120,6 +121,8 @@ namespace twitch_stream_check
             iCurrentCheck = 0;
             iMaxCheck = 0;
             iActiveStreams = 0;
+            bAccountOnline = false;
+            sAccountOnlineData = "";
             
             
             // create a new timer to run stuff at given interval
@@ -131,7 +134,7 @@ namespace twitch_stream_check
             // redo associated actions
             tStreamsTimer.AutoReset = true;
             // set the action we want to do at the given interval
-            tStreamsTimer.Elapsed += new ElapsedEventHandler(doTimer);
+            tStreamsTimer.Elapsed += new ElapsedEventHandler(DoTimer);
             // make sure the timer is starting
             tStreamsTimer.Enabled = true; // enable timer
             tStreamsTimerLastStart = DateTime.Now;
@@ -156,16 +159,16 @@ namespace twitch_stream_check
         /// <summary>
         /// What to do each time our timer calls for us
         /// </summary>
-        void doTimer(object sender, EventArgs e)
+        void DoTimer(object sender, EventArgs e)
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "DOTIMER: Timer called us");
             tStreamsTimerLastStart = DateTime.Now;
-            Task.Factory.StartNew(checkStreams);
+            Task.Factory.StartNew(CheckStreams);
         }
         
         void CheckNextTime (object sender, EventArgs e)
         {
-            updateToolTip();
+            UpdateToolTip();
         }
         
         /// <summary>
@@ -180,9 +183,58 @@ namespace twitch_stream_check
 //            tStartDelayTimer.Dispose();
 //        }
         
-        private static void test(object sender, EventArgs e)
+        /// <summary>
+        /// Check own account
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        public void CheckAccount(object sender, EventArgs e)
         {
+            Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: Timer called us");
+            const string sBaseURL = "https://api.twitch.tv/kraken/streams/";
+            string sParams = "";
+            if (settings.checkaccount == "")
+                return;
+            Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: checking account: " + settings.checkaccount);
+            WebCheckResponse WebCheck = Functions.DoWebRequest(sBaseURL + settings.checkaccount + sParams);
             
+            if (WebCheck.bSuccess) {
+                sAccountOnlineData = "";
+                Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: Got something to work with");
+                dynamic data = Functions.ParseWebResponseToObject(WebCheck.HttpWResp);
+                Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: Parse done");
+                
+                if (data.stream.viewers != null) {
+                    sAccountOnlineData += Environment.NewLine + "Viewers: " + data.stream.viewers;
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: SET: viewers");
+                }
+                if (data.stream.average_fps != null) {
+                    sAccountOnlineData += Environment.NewLine + "FPS: " + data.stream.average_fps;
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: SET: average_fps");
+                }
+                if (data.stream.video_height != null) {
+                    sAccountOnlineData += Environment.NewLine + "Resolution: " + data.stream.video_height + "p";
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: SET: video_height");
+                }
+                if (data.stream.channel.delay != null) {
+                    sAccountOnlineData += Environment.NewLine + "Delay: " + data.stream.channel.delay;
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: SET: delay");
+                }
+                if (data.stream.channel.followers != null) {
+                    sAccountOnlineData += Environment.NewLine + "Followers: " + data.stream.channel.followers;
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: SET: followers");
+                }
+                if (data.stream.channel.views != null) {
+                    sAccountOnlineData += Environment.NewLine + "Views: " + data.stream.channel.views;
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: SET: views");
+                }
+                bAccountOnline = true;
+                Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: Account online " + sAccountOnlineData);
+            } else {
+                Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: No success");
+                bAccountOnline = false;
+                sAccountOnlineData = "";
+            }
         }
         
         /// <summary>
@@ -259,8 +311,8 @@ namespace twitch_stream_check
 
                 // add the new stream on top of the menu and append the other entries back to the menu
                 // make sure to add name to be able to search by key!
-                ToolStripItem tsiNewItem = new ToolStripMenuItem(sUser, null, (sender, e) => openStream(sUser), sUser);
-                tsiNewItem.ToolTipText = "Playing: " + Functions.convertAlphaNum(sGame);
+                ToolStripItem tsiNewItem = new ToolStripMenuItem(sUser, null, (sender, e) => OpenStream(sUser), sUser);
+                tsiNewItem.ToolTipText = "Playing: " + Functions.ConvertAlphaNum(sGame);
                 Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYCREATE: Created new MenuItem");
                 // add the new stream on top of the menu
                 try {
@@ -302,6 +354,7 @@ namespace twitch_stream_check
             Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Remove menu entry for stream: " + sUser);
             bool bRet = false;
             MyMenu.Invoke((MethodInvoker) delegate {
+                              Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Locking MyMenu");
                               lock (MyMenu) {
                                   int iMenuIDX = MyMenu.Items.IndexOfKey(sUser);
                                   Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Menu index: " + iMenuIDX);
@@ -324,42 +377,63 @@ namespace twitch_stream_check
             return bRet;
         }
         
-        private bool updateToolTip()
+        private bool UpdateToolTip()
         {
             if (this.InvokeRequired)
-                return (bool)this.Invoke ((Func<bool>)updateToolTip);
+                return (bool)this.Invoke ((Func<bool>)UpdateToolTip);
             
-            string s = "";
-            int iMin = 0;
-            int iSec = 0;
+            string sText    = iActiveStreams + " active Streams";
+            string sAdd     = "";
+            string sAccount = "";
+            string sDay     = "";
+            string sHour    = "";
+            string sMin     = "";
+            string sSec     = "";
+            int iDay        = 0;
+            int iHour       = 0;
+            int iMin        = 0;
+            int iSec        = 0;
             // display info when we are currently running an update
             if (bGettingData) {
-                s = iActiveStreams + " active Streams (Updating " + iCurrentCheck + "/" + iMaxCheck + ")";
+                sAdd = " (Updating " + iCurrentCheck + "/" + iMaxCheck + ")";
             } else {
                 try {
                     TimeSpan t = TimeSpan.FromSeconds(settings.checkinterval * 60) - (DateTime.Now - tStreamsTimerLastStart);
-                    iMin = t.Minutes; // how many minutes
-                    iSec = t.Seconds; // how many seconds
+                    iDay    = t.Days;       // how many days
+                    iHour   = t.Hours;      // how many hours
+                    iMin    = t.Minutes;    // how many minutes
+                    iSec    = t.Seconds;    // how many seconds
                 } catch (Exception ex) {
                     // possible division by zero
-                    Log.Add("updateToolTip>" + ex.Message);
+                    Log.Add("UpdateToolTip>" + ex.Message);
                 }
-                if ((iMin > 0) && (iSec > 0)) {
-                    s = iActiveStreams + " active Streams - next check in " + iMin + "m " + iSec + "s";
-                } else if ((iMin > 0) && (iSec == 0))
-                {
-                    s = iActiveStreams + " active Streams - next check in " + iMin + "m";
-                } else if ((iMin == 0) && (iSec > 0))
-                {
-                    s = iActiveStreams + " active Streams - next check in " + iSec + "s";
-                } else
-                {
-                    s = iActiveStreams + " active Streams";
+                
+                if (iDay > 0) {
+                    sDay    = " " + iDay + "d";
+                }
+                if (iHour > 0) {
+                    sHour   = " " + iHour + "h";
+                }
+                if (iMin > 0) {
+                    sMin    = " " + iMin + "m";
+                }
+                if (iSec > 0) {
+                    sSec    = " " + iSec + "s";
+                }
+                
+                if (sDay != "" || sHour != "" || sMin != "" || sSec != "") {
+                    sAdd = " - next check in" + sDay + sHour + sMin + sSec;
                 }
             }
-            notifyIcon1.Text = s;
-//            MyMenu.Invoke((MethodInvoker) delegate {notifyIcon1.Text = s;});
             
+            if (bAccountOnline) {
+                sAccount = sAccountOnlineData;
+//                Debug.WriteLineIf(GlobalVar.DEBUG, "UPDATETOOLTIP: Account Online " + sAccountOnlineData);
+            }
+//            notifyIcon1.Text = sText + sAdd + sAccount; // tooltip max 63 chars
+            notifyIcon1.Text = sText + sAdd;
+//            MyMenu.Invoke((MethodInvoker) delegate {notifyIcon1.Text = s;});
+            Debug.WriteLineIf(GlobalVar.DEBUG, "UPDATETOOLTIP: " + notifyIcon1.Text);
             return true;
         }
         
@@ -368,35 +442,35 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="sAccount">Streamname</param>
         /// <returns>Returns game name if stream is online</returns>
-        public string getOnlineStatus(string sAccount)
+        public string GetOnlineStatus(string sAccount)
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Putting response into var");
             string sReturn = null;
             WebCheckResponse WebCheck;
-            sAccount = Functions.convertAlphaNum(sAccount);
+            sAccount = Functions.ConvertAlphaNum(sAccount);
             const string sBaseURL = "https://api.twitch.tv/kraken/streams/";
             string sParams = "";
             string responseString = "";
             
             string sURL = sBaseURL + sAccount + sParams;
             Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Created URL: " + sURL);
-            WebCheck = Functions.doWebRequest(sURL);
+            WebCheck = Functions.DoWebRequest(sURL);
             if (sAccount != "" && (WebCheck.HttpWResp.StatusCode == HttpStatusCode.OK)) {
                 Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Parsing WebResponse");
-                try {
-                    using (Stream stream = WebCheck.HttpWResp.GetResponseStream()) {
-                        StreamReader reader = new StreamReader(stream, Encoding.UTF8);
-                        responseString = reader.ReadToEnd();
-                    }
-                } catch (Exception ex) {
-                    Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Failed on datastream: " + ex.Message);
-                    Log.Add("getOnlineStatus>" + ex.Message);
-                }
+//                try {
+//                    using (Stream stream = WebCheck.HttpWResp.GetResponseStream()) {
+//                        StreamReader reader = new StreamReader(stream, Encoding.UTF8);
+//                        responseString = reader.ReadToEnd();
+//                    }
+//                } catch (Exception ex) {
+//                    Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Failed on datastream: " + ex.Message);
+//                    Log.Add("GetOnlineStatus>" + ex.Message);
+//                }
                 
-                
+                dynamic data = Functions.ParseWebResponseToObject(WebCheck.HttpWResp);
                 Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Creating workable object from json response");
                 try {
-                    dynamic data = JsonConvert.DeserializeObject(responseString);
+//                    dynamic data = JsonConvert.DeserializeObject(responseString);
                     if (data.stream == null) {
                         Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: data.stream is null - user offline or error");
                         // offline handling
@@ -409,7 +483,7 @@ namespace twitch_stream_check
                     }
                 } catch (Exception ex) {
                     Debug.WriteLineIf(GlobalVar.DEBUG, "!EXCEPTION!:GETONLINESTATUS: Failed on Deserialize: " + ex.Message);
-                    Log.Add("getOnlineStatus>" + ex.Message);
+                    Log.Add("GetOnlineStatus>" + ex.Message);
                 }
                 
                 
@@ -424,15 +498,15 @@ namespace twitch_stream_check
         /// Open stream in default browser
         /// </summary>
         /// <param name="sUser">Streamname</param>
-        public void openStream(string sUser)
+        public void OpenStream(string sUser)
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "OPENSTREAM: Launch a browser to watch stream");
-            string sURL = getStreamURL(Functions.convertAlphaNum(sUser));
+            string sURL = GetStreamURL(Functions.ConvertAlphaNum(sUser));
             Debug.WriteLineIf(GlobalVar.DEBUG, "OPENSTREAM: Opening URL: " + sURL);
             try {
                 Process.Start(sURL);
             } catch (Exception ex) {
-                Log.Add("openStream>" + ex.Message);
+                Log.Add("OpenStream>" + ex.Message);
             }
         }
         
@@ -441,14 +515,14 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="sUser">Streamname</param>
         /// <returns>Returns URL of a twitch stream</returns>
-        public string getStreamURL(string sUser)
+        public string GetStreamURL(string sUser)
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "GETSTREAMURL: Create an URL for browser");
             const string sBaseURL   = "http://twitch.tv/";
             const string sAppendURL = "/";
             
             // create new url and make sure there is no sneaky code in the username
-            string sURL = sBaseURL + Functions.convertAlphaNum(sUser) + sAppendURL;
+            string sURL = sBaseURL + Functions.ConvertAlphaNum(sUser) + sAppendURL;
             
             return sURL;
         }
@@ -457,13 +531,13 @@ namespace twitch_stream_check
         /// Get information if a user is currently streaming
         /// </summary>
         /// <param name="sUser">Streamname</param>
-        public bool checkUser(string sUser)
+        public bool CheckUser(string sUser)
         {
             bool bActive = false;
             Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKUSER: We lookup a user: " + sUser);
             //notifyIcon1.ShowBalloonTip(1500, "Checking user", sUser, ToolTipIcon.Info);
-            string sGame = getOnlineStatus(sUser);
-            Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKUSER: We lookuped a user");
+            string sGame = GetOnlineStatus(sUser);
+            Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKUSER: We looked up a user");
 #if _HACK
             // HACK: creating random entries
             if (GlobalVar.GENERATEDATA) {
@@ -493,10 +567,10 @@ namespace twitch_stream_check
         /// <summary>
         /// Check all configured streams
         /// </summary>
-        public void checkStreams()
+        public void CheckStreams()
         {
             // create a local copy of the current list of streams to avoid getting a mixup when changing settings, settings were used directly earlier
-            IList<twStream> aCheckUsers = settings.streams; // store a local copy of streamlist
+            IList<TwStream> aCheckUsers = settings.streams; // store a local copy of streamlist
             
             Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKSTREAMS: We gotta check our list of streams");
             if (!bGettingData) {
@@ -507,11 +581,11 @@ namespace twitch_stream_check
                 try {
                     for (int i = 0; i < iMaxCheck; i++) {
                         iCurrentCheck = i + 1;
-                        checkUser(aCheckUsers[i].sStreamname);
+                        CheckUser(aCheckUsers[i].sStreamname);
                     }
                 } catch (Exception ex) {
                     // user index could be out of bounds
-                    Log.Add("checkStreams>" + ex.Message);
+                    Log.Add("CheckStreams>" + ex.Message);
                 }
                 
                 // bGettingData needs to be set to false first so iCurrentCheck update will work correctly
@@ -533,7 +607,7 @@ namespace twitch_stream_check
             get{ return _iActiveStreams; }
             set {
                 _iActiveStreams = value;
-                updateToolTip();
+                UpdateToolTip();
             }
         }
         
@@ -544,7 +618,7 @@ namespace twitch_stream_check
             get{ return _iCurrentCheck; }
             set {
                 _iCurrentCheck = value;
-                updateToolTip();
+                UpdateToolTip();
             }
         }
         
@@ -555,21 +629,21 @@ namespace twitch_stream_check
             get{ return _iNextCheck; }
             set {
                 _iNextCheck = value;
-                updateToolTip();
+                UpdateToolTip();
             }
         }
         
         /// <summary>
         /// Enter default settings values if non have been loaded
         /// </summary>
-        public void putDefaultSettings()
+        public void SetDefaultSettings()
         {
             if (settings.checkinterval == 0 || settings.checkinterval < 1) {
                 settings.checkinterval = 5;
             }
             
             if (settings.checkaccount == null) {
-                settings.checkaccount = "Account";
+                settings.checkaccount = "";
             }
             
             // add default entries when list is empty
@@ -577,15 +651,26 @@ namespace twitch_stream_check
                 // FIXME RELEASE: set default streams
                 string[] streamers = new string[] {"Autositz", "DRUCKWELLETV", "Garrynewman", "Denkii"};
 //                string[] streamers = new string[] {"Entry 1", "Entry 2", "Entry 3", "Entry 4"};
-                settings.streams = new List<twStream>();
+                settings.streams = new List<TwStream>();
                 foreach (string s in streamers) {
-                    twStream s2 = new twStream();
+                    TwStream s2 = new TwStream();
                     s2.bImportant= true;
                     s2.sStreamname = s;
                     settings.streams.Add(s2);
                 }
             }
             
+        }
+        
+        /// <summary>
+        /// Display info on Account
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void NotifyIcon1MouseClick(object sender, EventArgs e)
+        {
+            Debug.WriteLineIf(GlobalVar.DEBUG, "NOTIFYICON1MOUSECLICK: Info clicked");
+            notifyIcon1.ShowBalloonTip(30, settings.checkaccount, sAccountOnlineData, ToolTipIcon.Info);
         }
         
     }
@@ -597,7 +682,7 @@ namespace twitch_stream_check
     {
         public int checkinterval;
         public string checkaccount;
-        public IList<twStream> streams;
+        public IList<TwStream> streams;
         
         public MySettings()
         {
@@ -608,12 +693,12 @@ namespace twitch_stream_check
     /// <summary>
     /// Class for each single stream entry
     /// </summary>
-    public class twStream
+    public class TwStream
     {
         public bool bImportant { get; set; }
         public string sStreamname { get; set; }
         
-        public twStream()
+        public TwStream()
         {
             bImportant = false;
             sStreamname = "";

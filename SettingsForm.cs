@@ -79,7 +79,7 @@ namespace twitch_stream_check
             this.settings = objSettings;
             
             // add settings into form
-            putSettingsIntoForm();
+            PutSettingsIntoForm();
             
             // take a guess what we are doing here ...
             int[] iTMP = { 116, 104, 97, 45, 109, 111, 98, 64, 103, 109, 120, 46, 100, 101 };
@@ -134,7 +134,7 @@ namespace twitch_stream_check
             Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCLICKSAVE: Store the form field data into the settings");
             // get current settings from form and store them in the file
             // check interval
-            int iTMP = Functions.convertNum(comboBoxInterval.Text, 10);
+            int iTMP = Functions.ConvertNum(comboBoxInterval.Text, 10);
             // set timer to the new value entered in settings
             if (iTMP != this.settings.checkinterval) {
                 this.settings.checkinterval = iTMP;
@@ -142,7 +142,7 @@ namespace twitch_stream_check
             }
             
             // check account name
-            this.settings.checkaccount = Functions.convertAlphaNum(textBoxAccountCheck.Text);
+            this.settings.checkaccount = Functions.ConvertAlphaNum(textBoxAccountCheck.Text);
             Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCLICKSAVE: Set new Account to: " + textBoxAccountCheck.Text);
             
             // check streams
@@ -207,11 +207,11 @@ namespace twitch_stream_check
         /// <summary>
         /// Put currently stored settings into settings form
         /// </summary>
-        private void putSettingsIntoForm()
+        private void PutSettingsIntoForm()
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "PUTSETTINGSINTOFORM: Get settings into the form fields");
-            comboBoxInterval.Text = Functions.convertNum(settings.checkinterval.ToString()).ToString();
-            textBoxAccountCheck.Text = Functions.convertAlphaNum(this.settings.checkaccount);
+            comboBoxInterval.Text = Functions.ConvertNum(settings.checkinterval.ToString()).ToString();
+            textBoxAccountCheck.Text = Functions.ConvertAlphaNum(this.settings.checkaccount);
             
             try {
                 
@@ -223,7 +223,7 @@ namespace twitch_stream_check
                 dgvStreams.AutoGenerateColumns = false; // columns are set at designtime
                 dgvStreams.Refresh();
             } catch (Exception ex) {
-                Log.Add("getOnlineStatus>" + ex.Message);
+                Log.Add("PutSettingsIntoForm>" + ex.Message);
             }
             
         }
@@ -231,6 +231,7 @@ namespace twitch_stream_check
         /// <summary>
         /// Resize columns to usefull needs but keep the possibility of user resize afterwards (will get reset after each new input)
         /// Maybe not needed when Streamnames are set to Fill?
+        /// TODO: Obselete?
         /// </summary>
         private void ResizeColumns()
         {
@@ -252,19 +253,19 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="sAccount">Stream account to check</param>
         /// <returns>Returns true if successfull</returns>
-        public bool getAccountFollowings(string sAccount)
+        public bool GetAccountFollowings(string sAccount)
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "GETACCOUNTFOLLOWINGS: Parsing done");
             bool bSuccess = false;
             WebCheckResponse WebCheck;
-            sAccount = Functions.convertAlphaNum(sAccount);
+            sAccount = Functions.ConvertAlphaNum(sAccount);
             string sBaseURL = "https://api.twitch.tv/kraken/streams/followed/";
             string sParams = "";
             string responseString = "";
             
             string sURL = sBaseURL + sAccount + sParams;
             
-            WebCheck = Functions.doWebRequest(sURL);
+            WebCheck = Functions.DoWebRequest(sURL);
             if (WebCheck.HttpWResp.StatusCode == HttpStatusCode.OK) {
                 using (Stream stream = WebCheck.HttpWResp.GetResponseStream()) {
                     StreamReader reader = new StreamReader(stream, Encoding.UTF8);

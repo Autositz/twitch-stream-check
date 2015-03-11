@@ -27,9 +27,9 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="obj">The object to print</param>
         /// <returns>String to print out</returns>
-        public static string var_dump(object obj)
+        public static string Var_Dump(object obj)
         {
-            return var_dump(obj, 0);
+            return Var_Dump(obj, 0);
         }
         
         /// <summary>
@@ -41,7 +41,7 @@ namespace twitch_stream_check
         /// <param name="obj">The object to print</param>
         /// <param name="recursion">At which level to start - usually at 0</param>
         /// <returns>String to print out</returns>
-        public static string var_dump(object obj, int recursion)
+        public static string Var_Dump(object obj, int recursion)
         {
             StringBuilder result = new StringBuilder();
           
@@ -88,7 +88,7 @@ namespace twitch_stream_check
                                     // Call var_dump() again to list child properties
                                     // This throws an exception if the current property value
                                     // is of an unsupported type (eg. it has not properties)
-                                    result.Append(var_dump(value, recursion + 1));
+                                    result.Append(Var_Dump(value, recursion + 1));
                                 }
                                 else
                                 {
@@ -105,11 +105,11 @@ namespace twitch_stream_check
                                         result.AppendFormat("{0}{1} = {2}\n", indent, elementName, element.ToString());
           
                                         // Display the child properties
-                                        result.Append(var_dump(element, recursion + 2));
+                                        result.Append(Var_Dump(element, recursion + 2));
                                         elementCount++;
                                     }
           
-                                    result.Append(var_dump(value, recursion + 1));
+                                    result.Append(Var_Dump(value, recursion + 1));
                                 }
                             }
                             catch { }
@@ -166,7 +166,7 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="s">String with linefeeds to be converted</param>
         /// <returns>String Array</returns>
-        public static String[] convertLFtoArray(String s)
+        public static String[] ConvertLFtoArray(String s)
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "CONVERTLFTOARRAY: Convert a string with newlines to an array that splits at newlines");
             return s.Split(new string[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
@@ -177,7 +177,7 @@ namespace twitch_stream_check
         /// </summary>
         /// <param name="a">String Array to be merged</param>
         /// <returns>String with line feeds</returns>
-        public static String convertArraytoLF(String[] a)
+        public static String ConvertArraytoLF(String[] a)
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "CONVERTARRAYTOLF: Convert an array to string with newlines");
             return string.Join(Environment.NewLine, a);
@@ -189,7 +189,7 @@ namespace twitch_stream_check
         /// <param name="s">String to be checked</param>
         /// <param name="preserveNewline">Keep new lines or strip them too</param>
         /// <returns>Cleaned string</returns>
-        public static string convertAlphaNum(string s, bool preserveNewline= false)
+        public static string ConvertAlphaNum(string s, bool preserveNewline= false)
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "CONVERTALPHANUM: Converting text string to contain only valid chars with by preserving newline: " + preserveNewline);
             char[] arr = s.ToCharArray();
@@ -211,7 +211,7 @@ namespace twitch_stream_check
         /// <param name="s">String to be converted to an int</param>
         /// <param name="iFallback">Integer value to be used when conversion fails</param>
         /// <returns>Converted Integer or Fallback value</returns>
-        public static int convertNum(string s, int iFallback = 0)
+        public static int ConvertNum(string s, int iFallback = 0)
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "CONVERTNUM: Converting " + s + " with fallback: " + iFallback);
             int i = 0;
@@ -263,27 +263,47 @@ namespace twitch_stream_check
         /// Get data from an URL
         /// </summary>
         /// <param name="sURL">URL to contact</param>
-        /// <returns>Returns true if request was successfull</returns>
-        public static WebCheckResponse doWebRequest(string sURL)
+        /// <returns>Returns <para>WebCheckResponse.bSuccess == true</para> if request was successfull</returns>
+        public static WebCheckResponse DoWebRequest(string sURL)
         {
             WebCheckResponse WebCheck = new WebCheckResponse();
             
             try {
-                Debug.WriteLineIf(GlobalVar.DEBUG, "DOWEBREQUEST: Making a new Web Request");
+                Debug.WriteLineIf(GlobalVar.DEBUG, "DOWEBREQUEST: Making a new Web Request: " + sURL);
                 HttpWebRequest HttpWReq = (HttpWebRequest)WebRequest.Create(sURL);
                 Debug.WriteLineIf(GlobalVar.DEBUG, "DOWEBREQUEST: Putting response into var");
                 WebCheck.HttpWResp = (HttpWebResponse)HttpWReq.GetResponse();
                 Debug.WriteLineIf(GlobalVar.DEBUG, "DOWEBREQUEST: Response stored for future use");
                 
                 if (WebCheck.HttpWResp.StatusCode == HttpStatusCode.OK) {
+                    WebCheck.bSuccess = true;
                 }
                     
             } catch (Exception ex) {
                 Logging Log = new Logging();
-                Log.Add("doWebRequest>" + ex.Message);
+                Log.Add("DoWebRequest> URL: " + sURL + " " + ex.Message);
             }
             
             return WebCheck;
+        }
+        
+        public static object ParseWebResponseToObject(HttpWebResponse HttpWResp)
+        {
+            string responseString = "";
+            try {
+                using (Stream stream = HttpWResp.GetResponseStream()) {
+                    StreamReader reader = new StreamReader(stream, Encoding.UTF8);
+                    responseString = reader.ReadToEnd();
+                }
+                dynamic data = JsonConvert.DeserializeObject(responseString);
+                return data;
+            } catch (Exception ex) {
+                Debug.WriteLineIf(GlobalVar.DEBUG, "PARSEWEBRESPONSETOOBJECT: " + ex.Message);
+                Logging Log = new Logging();
+                Log.Add("ParseWebResponseToObject>" + ex.Message);
+            }
+            
+            return null;
         }
     }
     
