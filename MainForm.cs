@@ -42,6 +42,10 @@ namespace twitch_stream_check
         /// </summary>
         private bool bGettingData;
         /// <summary>
+        /// Is true if there is currently an important Streamlist check running
+        /// </summary>
+        private bool bGettingImportantData;
+        /// <summary>
         /// The running number of the current check
         /// </summary>
         private int _iCurrentCheck;
@@ -63,7 +67,12 @@ namespace twitch_stream_check
         private System.Timers.Timer tStreamsTimer;
         private DateTime tStreamsTimerLastStart;
         /// <summary>
-        /// Background timer to check streams
+        /// Background timer to check important streams
+        /// </summary>
+        private System.Timers.Timer tStreamsImportantTimer;
+        private DateTime tStreamsImportantTimerLastStart;
+        /// <summary>
+        /// Background timer to update tooltip info
         /// </summary>
         private System.Timers.Timer tToolTipTimer;
         /// <summary>
@@ -82,6 +91,11 @@ namespace twitch_stream_check
         /// Use logging for exceptions
         /// </summary>
         private Logging Log;
+        /// <summary>
+        /// True if the Account info Balloon is currently shown
+        /// </summary>
+        private bool bAccountToolTipDisplayed;
+        private System.Timers.Timer tAccountBalloonTimer;
         
         public MainForm()
         {
@@ -146,11 +160,11 @@ namespace twitch_stream_check
             tToolTipTimer.Elapsed += new ElapsedEventHandler(CheckNextTime);
             tToolTipTimer.Enabled = true;
             
-//            tStartDelayTimer = new System.Timers.Timer();
-//            tStartDelayTimer.Interval = 5000;
-//            tStartDelayTimer.AutoReset = false;
-//            tStartDelayTimer.Elapsed += new ElapsedEventHandler(StartDelay);
-//            tStartDelayTimer.Enabled = true;
+            tStreamsImportantTimer = new System.Timers.Timer();
+            tStreamsImportantTimer.Interval = (settings.checkintervalimportant * 60 * 1000);
+            tStreamsImportantTimer.AutoReset = false;
+            tStreamsImportantTimer.Elapsed += new ElapsedEventHandler(DoTimerImportant);
+            tStreamsImportantTimer.Enabled = true;
             
             // clear up what we used
 //            Program.objSettingsForm.Dispose(); // really needed at start?
@@ -164,6 +178,16 @@ namespace twitch_stream_check
             Debug.WriteLineIf(GlobalVar.DEBUG, "DOTIMER: Timer called us");
             tStreamsTimerLastStart = DateTime.Now;
             Task.Factory.StartNew(CheckStreams);
+        }
+        
+        /// <summary>
+        /// What to do each time our important timer calls for us
+        /// </summary>
+        void DoTimerImportant(object sender, EventArgs e)
+        {
+            Debug.WriteLineIf(GlobalVar.DEBUG, "DOTIMERIMPORTANT: Timer called us");
+            tStreamsImportantTimerLastStart = DateTime.Now;
+            Task.Factory.StartNew(CheckStreamsImportant);
         }
         
         void CheckNextTime (object sender, EventArgs e)
@@ -207,6 +231,14 @@ namespace twitch_stream_check
                 if (data.stream.viewers != null) {
                     sAccountOnlineData += Environment.NewLine + "Viewers: " + data.stream.viewers;
                     Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: SET: viewers");
+                }
+                if (data.stream.created_at != null) {
+                    sAccountOnlineData += Environment.NewLine + "Game: " + data.stream.created_at;
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: SET: created_at");
+                }
+                if (data.stream.game != null) {
+                    sAccountOnlineData += Environment.NewLine + "Game: " + data.stream.game;
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: SET: game");
                 }
                 if (data.stream.average_fps != null) {
                     sAccountOnlineData += Environment.NewLine + "FPS: " + data.stream.average_fps;
@@ -281,9 +313,23 @@ namespace twitch_stream_check
         
         public void SetTimer(int iTimer)
         {
-            tStreamsTimer.Interval = iTimer * 60 * 1000;
-            tStreamsTimerLastStart = DateTime.Now;
-            Debug.WriteLineIf(GlobalVar.DEBUG, "SETTIMER: Set new interval to: " + tStreamsTimer.Interval + " ms");
+            this.SetTimer(iTimer, "");
+        }
+        
+        public void SetTimer(int iTimer, string sType)
+        {
+            switch (sType) {
+                case "important":
+                    tStreamsImportantTimer.Interval = iTimer * 60 * 1000;
+                    tStreamsImportantTimerLastStart = DateTime.Now;
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "SETTIMER: Set new important interval to: " + tStreamsImportantTimer.Interval + " ms");
+                    break;
+                default:
+                    tStreamsTimer.Interval = iTimer * 60 * 1000;
+                    tStreamsTimerLastStart = DateTime.Now;
+                    Debug.WriteLineIf(GlobalVar.DEBUG, "SETTIMER: Set new interval to: " + tStreamsTimer.Interval + " ms");
+                    break;
+            }
         }
         
         /// <summary>
@@ -463,6 +509,33 @@ namespace twitch_stream_check
             return true;
         }
         
+        private void ShowAccountToolTip(object sender, EventArgs e)
+        {
+            if (!bAccountToolTipDisplayed) {
+                bAccountToolTipDisplayed = true;
+                notifyIcon1.MouseMove -= new System.Windows.Forms.MouseEventHandler(ShowAccountToolTip);
+                tAccountBalloonTimer = new System.Timers.Timer();
+                tAccountBalloonTimer.Interval = 2510;
+                tAccountBalloonTimer.AutoReset = false;
+                tAccountBalloonTimer.Elapsed += new System.Timers.ElapsedEventHandler(ShowAccountToolTipDone);
+                tAccountBalloonTimer.Enabled = true;
+                
+                try {
+                    notifyIcon1.ShowBalloonTip(2500, settings.checkaccount, sAccountOnlineData, ToolTipIcon.Info);
+                } catch (Exception ex) {
+                    // text could be empty
+                }
+            }
+        }
+        
+        private void ShowAccountToolTipDone(object sender, EventArgs e)
+        {
+            bAccountToolTipDisplayed = false;
+            tAccountBalloonTimer.Enabled = false;
+            tAccountBalloonTimer.Dispose();
+            notifyIcon1.MouseMove += new System.Windows.Forms.MouseEventHandler(ShowAccountToolTip);
+        }
+        
         /// <summary>
         /// Check if an account is currently online
         /// </summary>
@@ -597,6 +670,7 @@ namespace twitch_stream_check
         {
             // create a local copy of the current list of streams to avoid getting a mixup when changing settings, settings were used directly earlier
             IList<TwStream> aCheckUsers = settings.streams; // store a local copy of streamlist
+            aCheckUsers = RemoveUnwantedStreams(aCheckUsers, "");
             
             Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKSTREAMS: We gotta check our list of streams");
             if (!bGettingData) {
@@ -625,6 +699,64 @@ namespace twitch_stream_check
                                 "Check already running", MessageBoxButtons.OK, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1);
             }
         }
+        
+        /// <summary>
+        /// Check all configured important streams
+        /// </summary>
+        public void CheckStreamsImportant()
+        {
+            // create a local copy of the current list of streams to avoid getting a mixup when changing settings, settings were used directly earlier
+            IList<TwStream> aCheckUsers = settings.streams; // store a local copy of streamlist
+            aCheckUsers = RemoveUnwantedStreams(aCheckUsers, "important");
+            
+            Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKSTREAMS: We gotta check our list of streams");
+            if (!bGettingImportantData) {
+                bGettingImportantData = true;
+                
+                // set maxcheck for progress display
+                int iMax = aCheckUsers.Count;
+                try {
+                    for (int i = 0; i < iMax; i++) {
+                        CheckUser(aCheckUsers[i].sStreamname);
+                    }
+                } catch (Exception ex) {
+                    // user index could be out of bounds
+                    Log.Add("CheckStreams>" + ex.Message);
+                }
+                
+                // bGettingData needs to be set to false first so iCurrentCheck update will work correctly
+                bGettingImportantData = false;
+            } else {
+                Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKSTREAMS: Another check is still running..." + iCurrentCheck + "/" + iMaxCheck);
+                // FIXME RELEASE: Make sure to have this enabled for release! So users get a warning when their list can't be processed in between intervals.
+                MessageBox.Show("Consider raising the important interval a bit." + Environment.NewLine + "Processing important streams" + Environment.NewLine + Environment.NewLine +
+                                "If this message keeps coming up over and over again consider putting less streams on important or raise important check interval.",
+                                "Important Check already running", MessageBoxButtons.OK, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1);
+            }
+        }
+        
+        private IList<TwStream> RemoveUnwantedStreams(IList<TwStream> aCheckUsers, string sType)
+        {
+            int iMax = aCheckUsers.Count;
+            IList<TwStream> aUsers = new List<TwStream>();
+            for (int i = 0; i < iMax; i++) {
+                switch (sType) {
+                    // add important streams to return list
+                    case "important":
+                        if (aCheckUsers[i].bImportant)
+                        {
+                            aUsers.Add(aCheckUsers[i]);
+                        }
+                        break;
+                    // add normal streams to return list
+                    default:
+                        aUsers.Add(aCheckUsers[i]);
+                        break;
+                }
+            }
+            return aUsers;
+        }
+        
         
         /// <summary>
         /// Wrapper to update ToolTip everytime the streamer count changes
@@ -668,6 +800,10 @@ namespace twitch_stream_check
                 settings.checkinterval = 5;
             }
             
+            if (settings.checkintervalimportant == 0 || settings.checkintervalimportant < 1) {
+                settings.checkintervalimportant = 1;
+            }
+            
             if (settings.checkaccount == null) {
                 settings.checkaccount = "";
             }
@@ -688,17 +824,6 @@ namespace twitch_stream_check
             
         }
         
-        /// <summary>
-        /// Display info on Account
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        void NotifyIcon1MouseClick(object sender, EventArgs e)
-        {
-            Debug.WriteLineIf(GlobalVar.DEBUG, "NOTIFYICON1MOUSECLICK: Info clicked");
-            notifyIcon1.ShowBalloonTip(30, settings.checkaccount, sAccountOnlineData, ToolTipIcon.Info);
-        }
-        
     }
     
     /// <summary>
@@ -707,6 +832,7 @@ namespace twitch_stream_check
     public class MySettings : AppSettings<MySettings>
     {
         public int checkinterval;
+        public int checkintervalimportant;
         public string checkaccount;
         public IList<TwStream> streams;
         

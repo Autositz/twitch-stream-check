@@ -135,10 +135,15 @@ namespace twitch_stream_check
             // get current settings from form and store them in the file
             // check interval
             int iTMP = Functions.ConvertNum(comboBoxInterval.Text, 10);
+            int iTMP2 = Functions.ConvertNum(comboBoxIntervalImportant.Text, 5);
             // set timer to the new value entered in settings
             if (iTMP != this.settings.checkinterval) {
                 this.settings.checkinterval = iTMP;
                 objMainForm.SetTimer(this.settings.checkinterval);
+            }
+            if (iTMP2 != this.settings.checkintervalimportant) {
+                this.settings.checkintervalimportant = iTMP2;
+                objMainForm.SetTimer(this.settings.checkintervalimportant, "important");
             }
             
             // check account name
@@ -211,6 +216,7 @@ namespace twitch_stream_check
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "PUTSETTINGSINTOFORM: Get settings into the form fields");
             comboBoxInterval.Text = Functions.ConvertNum(settings.checkinterval.ToString()).ToString();
+            comboBoxIntervalImportant.Text = Functions.ConvertNum(settings.checkintervalimportant.ToString()).ToString();
             textBoxAccountCheck.Text = Functions.ConvertAlphaNum(this.settings.checkaccount);
             
             try {
