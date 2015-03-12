@@ -146,6 +146,9 @@ namespace twitch_stream_check
                 objMainForm.SetTimer(this.settings.checkintervalimportant, "important");
             }
             
+            // display balloon info for online/offline status
+            this.settings.ballooninfo = checkBoxBalloonInfo.Checked;
+            
             // check account name
             this.settings.checkaccount = Functions.ConvertAlphaNum(textBoxAccountCheck.Text);
             Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCLICKSAVE: Set new Account to: " + textBoxAccountCheck.Text);
@@ -217,6 +220,7 @@ namespace twitch_stream_check
             Debug.WriteLineIf(GlobalVar.DEBUG, "PUTSETTINGSINTOFORM: Get settings into the form fields");
             comboBoxInterval.Text = Functions.ConvertNum(settings.checkinterval.ToString()).ToString();
             comboBoxIntervalImportant.Text = Functions.ConvertNum(settings.checkintervalimportant.ToString()).ToString();
+            checkBoxBalloonInfo.Checked = settings.ballooninfo;
             textBoxAccountCheck.Text = Functions.ConvertAlphaNum(this.settings.checkaccount);
             
             try {

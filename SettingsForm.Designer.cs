@@ -38,6 +38,8 @@ namespace twitch_stream_check
         private System.Windows.Forms.ComboBox comboBoxIntervalImportant;
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.GroupBox groupBoxBalloonInfo;
+        private System.Windows.Forms.CheckBox checkBoxBalloonInfo;
         
         /// <summary>
         /// Disposes resources used by the form.
@@ -87,11 +89,14 @@ namespace twitch_stream_check
             this.comboBoxIntervalImportant = new System.Windows.Forms.ComboBox();
             this.label8 = new System.Windows.Forms.Label();
             this.label7 = new System.Windows.Forms.Label();
+            this.groupBoxBalloonInfo = new System.Windows.Forms.GroupBox();
+            this.checkBoxBalloonInfo = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.dgvStreams)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.bsStreams)).BeginInit();
             this.groupBoxStreamSettings.SuspendLayout();
             this.groupBoxChannelsFollowing.SuspendLayout();
             this.groupBoxIntervalSettings.SuspendLayout();
+            this.groupBoxBalloonInfo.SuspendLayout();
             this.SuspendLayout();
             // 
             // label1
@@ -391,12 +396,37 @@ namespace twitch_stream_check
             this.label7.TabIndex = 8;
             this.label7.Text = "Normal";
             // 
+            // groupBoxBalloonInfo
+            // 
+            this.groupBoxBalloonInfo.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBoxBalloonInfo.Controls.Add(this.checkBoxBalloonInfo);
+            this.groupBoxBalloonInfo.Location = new System.Drawing.Point(380, 108);
+            this.groupBoxBalloonInfo.Name = "groupBoxBalloonInfo";
+            this.groupBoxBalloonInfo.Size = new System.Drawing.Size(270, 33);
+            this.groupBoxBalloonInfo.TabIndex = 17;
+            this.groupBoxBalloonInfo.TabStop = false;
+            this.groupBoxBalloonInfo.Text = "Online/Offline Bubble";
+            // 
+            // checkBoxBalloonInfo
+            // 
+            this.checkBoxBalloonInfo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.checkBoxBalloonInfo.Checked = true;
+            this.checkBoxBalloonInfo.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBoxBalloonInfo.Location = new System.Drawing.Point(7, 13);
+            this.checkBoxBalloonInfo.Name = "checkBoxBalloonInfo";
+            this.checkBoxBalloonInfo.Size = new System.Drawing.Size(257, 19);
+            this.checkBoxBalloonInfo.TabIndex = 0;
+            this.checkBoxBalloonInfo.Text = "Display Online/Offline Information Balloon";
+            this.checkBoxBalloonInfo.UseVisualStyleBackColor = true;
+            // 
             // SettingsForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.buttonSettingsCANCEL;
             this.ClientSize = new System.Drawing.Size(650, 415);
+            this.Controls.Add(this.groupBoxBalloonInfo);
             this.Controls.Add(this.groupBoxIntervalSettings);
             this.Controls.Add(this.groupBoxChannelsFollowing);
             this.Controls.Add(this.groupBoxStreamSettings);
@@ -417,6 +447,7 @@ namespace twitch_stream_check
             this.groupBoxChannelsFollowing.ResumeLayout(false);
             this.groupBoxChannelsFollowing.PerformLayout();
             this.groupBoxIntervalSettings.ResumeLayout(false);
+            this.groupBoxBalloonInfo.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }

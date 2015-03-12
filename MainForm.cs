@@ -144,7 +144,9 @@ namespace twitch_stream_check
             // FIXME RELEASE: Make sure to set checkinterval timer for release!
             // start timer with 1000ms * 60s * interval-minutes
             tStreamsTimer.Interval = (settings.checkinterval * 60 * 1000);
-//            tStreamsTimer.Interval = 15000; // uncomment this for faster cycles on small entries
+#if _HACK
+            tStreamsTimer.Interval = 15000; // uncomment this for faster cycles on small entries
+#endif
             // redo associated actions
             tStreamsTimer.AutoReset = true;
             // set the action we want to do at the given interval
@@ -353,8 +355,6 @@ namespace twitch_stream_check
             
             // -1 means we have no matching menu entry and will add a new one, otherwise do nothing
             if (iMenuIDX == -1) {
-                notifyIcon1.ShowBalloonTip(900, "Stream is LIVE", sUser + " playing " + sGame, ToolTipIcon.None);
-
                 // add the new stream on top of the menu and append the other entries back to the menu
                 // make sure to add name to be able to search by key!
                 ToolStripItem tsiNewItem = new ToolStripMenuItem(sUser, null, (sender, e) => OpenStream(sUser), sUser);
@@ -362,19 +362,24 @@ namespace twitch_stream_check
                 Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYCREATE: Created new MenuItem");
                 // add the new stream on top of the menu
                 try {
-                    if (InvokeRequired) {
+                    if (MyMenu.InvokeRequired) {
+                        Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYCREATE: LOCK NEED INVOKE");
                         MyMenu.Invoke((MethodInvoker)delegate {
                             lock (MyMenu) {
                                 MyMenu.Items.Insert(0, tsiNewItem);
                             }
                         });
                     } else {
+                        Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYCREATE: LOCK without INVOKE");
                         lock (MyMenu) {
                             MyMenu.Items.Insert(0, tsiNewItem);
                         }
                     }
                     
 //                    MyMenu.Items.Insert(0, tsiNewItem);
+                    if (settings.ballooninfo) {
+                        notifyIcon1.ShowBalloonTip(900, "Stream is LIVE", sUser + " playing " + sGame, ToolTipIcon.None);
+                    }
                     bRet = true;
                     // increase active streams number only when we are really adding a new one
                     iActiveStreams++;
@@ -406,7 +411,7 @@ namespace twitch_stream_check
             
             Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Remove menu entry for stream: " + sUser);
             bool bRet = false;
-            if (InvokeRequired) {
+            if (MyMenu.InvokeRequired) {
                 MyMenu.Invoke((MethodInvoker)delegate {
                     Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Locking MyMenu");
                     lock (MyMenu) {
@@ -416,9 +421,11 @@ namespace twitch_stream_check
                                   
                         if (iMenuIDX != -1) {
                             Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Entry found at: " + iMenuIDX);
-                            notifyIcon1.ShowBalloonTip(750, "Stream is Offline", sUser, ToolTipIcon.Info);
                             MyMenu.Items.RemoveAt(iMenuIDX);
 //                                      MyMenu.Items.RemoveAt(iMenuIDX);
+                            if (settings.ballooninfo) {
+                                notifyIcon1.ShowBalloonTip(750, "Stream is Offline", sUser, ToolTipIcon.Info);
+                            }
                             bRet = true;
                             // decrease active streams number only when we are really removing an entry
                             iActiveStreams--;
@@ -434,9 +441,11 @@ namespace twitch_stream_check
                               
                     if (iMenuIDX != -1) {
                         Debug.WriteLineIf(GlobalVar.DEBUG, "MENUENTRYREMOVE: Entry found at: " + iMenuIDX);
-                        notifyIcon1.ShowBalloonTip(750, "Stream is Offline", sUser, ToolTipIcon.Info);
                         MyMenu.Items.RemoveAt(iMenuIDX);
 //                                      MyMenu.Items.RemoveAt(iMenuIDX);
+                        if (settings.ballooninfo) {
+                            notifyIcon1.ShowBalloonTip(750, "Stream is Offline", sUser, ToolTipIcon.Info);
+                        }
                         bRet = true;
                         // decrease active streams number only when we are really removing an entry
                         iActiveStreams--;
@@ -804,6 +813,10 @@ namespace twitch_stream_check
                 settings.checkintervalimportant = 1;
             }
             
+            if (settings.ballooninfo == null) {
+                settings.ballooninfo = true;
+            }
+            
             if (settings.checkaccount == null) {
                 settings.checkaccount = "";
             }
@@ -833,6 +846,7 @@ namespace twitch_stream_check
     {
         public int checkinterval;
         public int checkintervalimportant;
+        public bool ballooninfo;
         public string checkaccount;
         public IList<TwStream> streams;
         
