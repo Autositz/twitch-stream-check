@@ -40,6 +40,16 @@ namespace twitch_stream_check
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.GroupBox groupBoxBalloonInfo;
         private System.Windows.Forms.CheckBox checkBoxBalloonInfo;
+        private System.Windows.Forms.GroupBox groupBoxAccountDetails;
+        private System.Windows.Forms.CheckBox checkBoxAccountCreatedAt;
+        private System.Windows.Forms.CheckBox checkBoxAccountViewers;
+        private System.Windows.Forms.CheckBox checkBoxAccountGame;
+        private System.Windows.Forms.CheckBox checkBoxAccountFPS;
+        private System.Windows.Forms.CheckBox checkBoxAccountVideoHeight;
+        private System.Windows.Forms.CheckBox checkBoxAccountDelay;
+        private System.Windows.Forms.CheckBox checkBoxAccountFollowers;
+        private System.Windows.Forms.Label labelAccountInfo;
+        private System.Windows.Forms.CheckBox checkBoxAccountViews;
         
         /// <summary>
         /// Disposes resources used by the form.
@@ -91,12 +101,23 @@ namespace twitch_stream_check
             this.label7 = new System.Windows.Forms.Label();
             this.groupBoxBalloonInfo = new System.Windows.Forms.GroupBox();
             this.checkBoxBalloonInfo = new System.Windows.Forms.CheckBox();
+            this.groupBoxAccountDetails = new System.Windows.Forms.GroupBox();
+            this.checkBoxAccountViewers = new System.Windows.Forms.CheckBox();
+            this.checkBoxAccountCreatedAt = new System.Windows.Forms.CheckBox();
+            this.checkBoxAccountGame = new System.Windows.Forms.CheckBox();
+            this.checkBoxAccountFPS = new System.Windows.Forms.CheckBox();
+            this.checkBoxAccountVideoHeight = new System.Windows.Forms.CheckBox();
+            this.checkBoxAccountDelay = new System.Windows.Forms.CheckBox();
+            this.checkBoxAccountFollowers = new System.Windows.Forms.CheckBox();
+            this.checkBoxAccountViews = new System.Windows.Forms.CheckBox();
+            this.labelAccountInfo = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.dgvStreams)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.bsStreams)).BeginInit();
             this.groupBoxStreamSettings.SuspendLayout();
             this.groupBoxChannelsFollowing.SuspendLayout();
             this.groupBoxIntervalSettings.SuspendLayout();
             this.groupBoxBalloonInfo.SuspendLayout();
+            this.groupBoxAccountDetails.SuspendLayout();
             this.SuspendLayout();
             // 
             // label1
@@ -420,12 +441,119 @@ namespace twitch_stream_check
             this.checkBoxBalloonInfo.Text = "Display Online/Offline Information Balloon";
             this.checkBoxBalloonInfo.UseVisualStyleBackColor = true;
             // 
+            // groupBoxAccountDetails
+            // 
+            this.groupBoxAccountDetails.Controls.Add(this.labelAccountInfo);
+            this.groupBoxAccountDetails.Controls.Add(this.checkBoxAccountViews);
+            this.groupBoxAccountDetails.Controls.Add(this.checkBoxAccountFollowers);
+            this.groupBoxAccountDetails.Controls.Add(this.checkBoxAccountDelay);
+            this.groupBoxAccountDetails.Controls.Add(this.checkBoxAccountVideoHeight);
+            this.groupBoxAccountDetails.Controls.Add(this.checkBoxAccountFPS);
+            this.groupBoxAccountDetails.Controls.Add(this.checkBoxAccountGame);
+            this.groupBoxAccountDetails.Controls.Add(this.checkBoxAccountCreatedAt);
+            this.groupBoxAccountDetails.Controls.Add(this.checkBoxAccountViewers);
+            this.groupBoxAccountDetails.Location = new System.Drawing.Point(380, 141);
+            this.groupBoxAccountDetails.Name = "groupBoxAccountDetails";
+            this.groupBoxAccountDetails.Size = new System.Drawing.Size(270, 137);
+            this.groupBoxAccountDetails.TabIndex = 18;
+            this.groupBoxAccountDetails.TabStop = false;
+            this.groupBoxAccountDetails.Text = "Account Online Details";
+            // 
+            // checkBoxAccountViewers
+            // 
+            this.checkBoxAccountViewers.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.checkBoxAccountViewers.Location = new System.Drawing.Point(3, 46);
+            this.checkBoxAccountViewers.Name = "checkBoxAccountViewers";
+            this.checkBoxAccountViewers.Size = new System.Drawing.Size(130, 24);
+            this.checkBoxAccountViewers.TabIndex = 0;
+            this.checkBoxAccountViewers.Text = "Viewers";
+            this.checkBoxAccountViewers.UseVisualStyleBackColor = true;
+            // 
+            // checkBoxAccountCreatedAt
+            // 
+            this.checkBoxAccountCreatedAt.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.checkBoxAccountCreatedAt.Location = new System.Drawing.Point(3, 68);
+            this.checkBoxAccountCreatedAt.Name = "checkBoxAccountCreatedAt";
+            this.checkBoxAccountCreatedAt.Size = new System.Drawing.Size(130, 24);
+            this.checkBoxAccountCreatedAt.TabIndex = 1;
+            this.checkBoxAccountCreatedAt.Text = "Online since";
+            this.checkBoxAccountCreatedAt.UseVisualStyleBackColor = true;
+            // 
+            // checkBoxAccountGame
+            // 
+            this.checkBoxAccountGame.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.checkBoxAccountGame.Location = new System.Drawing.Point(3, 90);
+            this.checkBoxAccountGame.Name = "checkBoxAccountGame";
+            this.checkBoxAccountGame.Size = new System.Drawing.Size(130, 24);
+            this.checkBoxAccountGame.TabIndex = 2;
+            this.checkBoxAccountGame.Text = "Game";
+            this.checkBoxAccountGame.UseVisualStyleBackColor = true;
+            // 
+            // checkBoxAccountFPS
+            // 
+            this.checkBoxAccountFPS.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.checkBoxAccountFPS.Location = new System.Drawing.Point(3, 112);
+            this.checkBoxAccountFPS.Name = "checkBoxAccountFPS";
+            this.checkBoxAccountFPS.Size = new System.Drawing.Size(130, 24);
+            this.checkBoxAccountFPS.TabIndex = 3;
+            this.checkBoxAccountFPS.Text = "FPS";
+            this.checkBoxAccountFPS.UseVisualStyleBackColor = true;
+            // 
+            // checkBoxAccountVideoHeight
+            // 
+            this.checkBoxAccountVideoHeight.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.checkBoxAccountVideoHeight.Location = new System.Drawing.Point(137, 46);
+            this.checkBoxAccountVideoHeight.Name = "checkBoxAccountVideoHeight";
+            this.checkBoxAccountVideoHeight.Size = new System.Drawing.Size(130, 24);
+            this.checkBoxAccountVideoHeight.TabIndex = 4;
+            this.checkBoxAccountVideoHeight.Text = "Video height";
+            this.checkBoxAccountVideoHeight.UseVisualStyleBackColor = true;
+            // 
+            // checkBoxAccountDelay
+            // 
+            this.checkBoxAccountDelay.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.checkBoxAccountDelay.Location = new System.Drawing.Point(137, 68);
+            this.checkBoxAccountDelay.Name = "checkBoxAccountDelay";
+            this.checkBoxAccountDelay.Size = new System.Drawing.Size(130, 24);
+            this.checkBoxAccountDelay.TabIndex = 5;
+            this.checkBoxAccountDelay.Text = "Delay";
+            this.checkBoxAccountDelay.UseVisualStyleBackColor = true;
+            // 
+            // checkBoxAccountFollowers
+            // 
+            this.checkBoxAccountFollowers.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.checkBoxAccountFollowers.Location = new System.Drawing.Point(137, 90);
+            this.checkBoxAccountFollowers.Name = "checkBoxAccountFollowers";
+            this.checkBoxAccountFollowers.Size = new System.Drawing.Size(130, 24);
+            this.checkBoxAccountFollowers.TabIndex = 6;
+            this.checkBoxAccountFollowers.Text = "Followers";
+            this.checkBoxAccountFollowers.UseVisualStyleBackColor = true;
+            // 
+            // checkBoxAccountViews
+            // 
+            this.checkBoxAccountViews.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.checkBoxAccountViews.Location = new System.Drawing.Point(137, 112);
+            this.checkBoxAccountViews.Name = "checkBoxAccountViews";
+            this.checkBoxAccountViews.Size = new System.Drawing.Size(130, 24);
+            this.checkBoxAccountViews.TabIndex = 7;
+            this.checkBoxAccountViews.Text = "Views";
+            this.checkBoxAccountViews.UseVisualStyleBackColor = true;
+            // 
+            // labelAccountInfo
+            // 
+            this.labelAccountInfo.Location = new System.Drawing.Point(6, 16);
+            this.labelAccountInfo.Name = "labelAccountInfo";
+            this.labelAccountInfo.Size = new System.Drawing.Size(258, 27);
+            this.labelAccountInfo.TabIndex = 8;
+            this.labelAccountInfo.Text = "Which information should be displayed from a LIVE own account.";
+            // 
             // SettingsForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.buttonSettingsCANCEL;
             this.ClientSize = new System.Drawing.Size(650, 415);
+            this.Controls.Add(this.groupBoxAccountDetails);
             this.Controls.Add(this.groupBoxBalloonInfo);
             this.Controls.Add(this.groupBoxIntervalSettings);
             this.Controls.Add(this.groupBoxChannelsFollowing);
@@ -448,6 +576,7 @@ namespace twitch_stream_check
             this.groupBoxChannelsFollowing.PerformLayout();
             this.groupBoxIntervalSettings.ResumeLayout(false);
             this.groupBoxBalloonInfo.ResumeLayout(false);
+            this.groupBoxAccountDetails.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }

@@ -149,6 +149,20 @@ namespace twitch_stream_check
             // display balloon info for online/offline status
             this.settings.ballooninfo = checkBoxBalloonInfo.Checked;
             
+            // old settings compatibility mode, create accountinfos if there is non present
+            if (this.settings.accountinfo == null) {
+                this.settings.accountinfo = new AccountInfoDetails();
+            }
+            // account information display
+            this.settings.accountinfo.created_at    = checkBoxAccountCreatedAt.Checked;
+            this.settings.accountinfo.delay         = checkBoxAccountDelay.Checked;
+            this.settings.accountinfo.followers     = checkBoxAccountFollowers.Checked;
+            this.settings.accountinfo.average_fps   = checkBoxAccountFPS.Checked;
+            this.settings.accountinfo.game          = checkBoxAccountGame.Checked;
+            this.settings.accountinfo.video_height  = checkBoxAccountVideoHeight.Checked;
+            this.settings.accountinfo.viewers       = checkBoxAccountViewers.Checked;
+            this.settings.accountinfo.views         = checkBoxAccountViews.Checked;
+            
             // check account name
             this.settings.checkaccount = Functions.ConvertAlphaNum(textBoxAccountCheck.Text);
             Debug.WriteLineIf(GlobalVar.DEBUG, "BUTTONSETTINGSCLICKSAVE: Set new Account to: " + textBoxAccountCheck.Text);
@@ -218,10 +232,30 @@ namespace twitch_stream_check
         private void PutSettingsIntoForm()
         {
             Debug.WriteLineIf(GlobalVar.DEBUG, "PUTSETTINGSINTOFORM: Get settings into the form fields");
-            comboBoxInterval.Text = Functions.ConvertNum(settings.checkinterval.ToString()).ToString();
-            comboBoxIntervalImportant.Text = Functions.ConvertNum(settings.checkintervalimportant.ToString()).ToString();
-            checkBoxBalloonInfo.Checked = settings.ballooninfo;
-            textBoxAccountCheck.Text = Functions.ConvertAlphaNum(this.settings.checkaccount);
+            comboBoxInterval.Text               = Functions.ConvertNum(settings.checkinterval.ToString()).ToString();
+            comboBoxIntervalImportant.Text      = Functions.ConvertNum(settings.checkintervalimportant.ToString()).ToString();
+            checkBoxBalloonInfo.Checked         = settings.ballooninfo;
+            // check if accountinfo is there, compatibility with old settings save
+            if (settings.accountinfo == null) {
+                checkBoxAccountFPS.Checked = true;
+                checkBoxAccountCreatedAt.Checked = true;
+                checkBoxAccountDelay.Checked = true;
+                checkBoxAccountFollowers.Checked = true;
+                checkBoxAccountGame.Checked = true;
+                checkBoxAccountVideoHeight.Checked = true;
+                checkBoxAccountViewers.Checked = true;
+                checkBoxAccountViews.Checked = true;
+            } else {
+                checkBoxAccountFPS.Checked = settings.accountinfo.average_fps;
+                checkBoxAccountCreatedAt.Checked = settings.accountinfo.created_at;
+                checkBoxAccountDelay.Checked = settings.accountinfo.delay;
+                checkBoxAccountFollowers.Checked = settings.accountinfo.followers;
+                checkBoxAccountGame.Checked = settings.accountinfo.game;
+                checkBoxAccountVideoHeight.Checked = settings.accountinfo.video_height;
+                checkBoxAccountViewers.Checked = settings.accountinfo.viewers;
+                checkBoxAccountViews.Checked = settings.accountinfo.views;
+            }
+            textBoxAccountCheck.Text            = Functions.ConvertAlphaNum(this.settings.checkaccount);
             
             try {
                 

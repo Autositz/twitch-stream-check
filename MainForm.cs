@@ -230,35 +230,35 @@ namespace twitch_stream_check
                 dynamic data = Functions.ParseWebResponseToObject(WebCheck.HttpWResp);
                 Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: Parse done");
                 
-                if (data.stream.viewers != null) {
+                if (settings.accountinfo.viewers && (data.stream.viewers != null)) {
                     sAccountOnlineData += Environment.NewLine + "Viewers: " + data.stream.viewers;
                     Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: SET: viewers");
                 }
-                if (data.stream.created_at != null) {
-                    sAccountOnlineData += Environment.NewLine + "Game: " + data.stream.created_at;
+                if (settings.accountinfo.created_at && (data.stream.created_at != null)) {
+                    sAccountOnlineData += Environment.NewLine + "Online since: " + data.stream.created_at;
                     Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: SET: created_at");
                 }
-                if (data.stream.game != null) {
+                if (settings.accountinfo.game && (data.stream.game != null)) {
                     sAccountOnlineData += Environment.NewLine + "Game: " + data.stream.game;
                     Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: SET: game");
                 }
-                if (data.stream.average_fps != null) {
+                if (settings.accountinfo.average_fps && (data.stream.average_fps != null)) {
                     sAccountOnlineData += Environment.NewLine + "FPS: " + data.stream.average_fps;
                     Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: SET: average_fps");
                 }
-                if (data.stream.video_height != null) {
+                if (settings.accountinfo.video_height && (data.stream.video_height != null)) {
                     sAccountOnlineData += Environment.NewLine + "Resolution: " + data.stream.video_height + "p";
                     Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: SET: video_height");
                 }
-                if (data.stream.channel.delay != null) {
+                if (settings.accountinfo.delay && (data.stream.channel.delay != null)) {
                     sAccountOnlineData += Environment.NewLine + "Delay: " + data.stream.channel.delay;
                     Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: SET: delay");
                 }
-                if (data.stream.channel.followers != null) {
+                if (settings.accountinfo.followers && (data.stream.channel.followers != null)) {
                     sAccountOnlineData += Environment.NewLine + "Followers: " + data.stream.channel.followers;
                     Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: SET: followers");
                 }
-                if (data.stream.channel.views != null) {
+                if (settings.accountinfo.views && (data.stream.channel.views != null)) {
                     sAccountOnlineData += Environment.NewLine + "Views: " + data.stream.channel.views;
                     Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKACCOUNT: SET: views");
                 }
@@ -813,10 +813,6 @@ namespace twitch_stream_check
                 settings.checkintervalimportant = 1;
             }
             
-            if (settings.ballooninfo == null) {
-                settings.ballooninfo = true;
-            }
-            
             if (settings.checkaccount == null) {
                 settings.checkaccount = "";
             }
@@ -847,12 +843,14 @@ namespace twitch_stream_check
         public int checkinterval;
         public int checkintervalimportant;
         public bool ballooninfo;
+        public AccountInfoDetails accountinfo;
         public string checkaccount;
         public IList<TwStream> streams;
         
         public MySettings()
         {
             // population of default data moved to putDefaultSettings() to avoid getting extra List entries on Load
+            ballooninfo = true;
         }
     }
     
@@ -868,6 +866,34 @@ namespace twitch_stream_check
         {
             bImportant = false;
             sStreamname = "";
+        }
+    }
+    
+    /// <summary>
+    /// Class for account info details
+    /// </summary>
+    public class AccountInfoDetails
+    {
+        public bool viewers { get; set; }
+        public bool created_at { get; set; }
+        public bool game { get; set; }
+        public bool average_fps { get; set; }
+        public bool video_height { get; set; }
+        public bool delay { get; set; }
+        public bool followers { get; set; }
+        public bool views { get; set; }
+        
+        public AccountInfoDetails()
+        {
+            // really needed to set?
+            viewers = true;
+            created_at = true;
+            game = true;
+            average_fps = true;
+            video_height = true;
+            delay = true;
+            followers = true;
+            views = true;
         }
     }
 }
