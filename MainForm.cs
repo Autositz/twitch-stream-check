@@ -7,7 +7,9 @@
  * To change this template use Tools | Options | Coding | Edit Standard Headers.
  */
 
+#if DEBUG
 //#define _HACK
+#endif
 
 using System;
 using System.Diagnostics;
@@ -65,11 +67,17 @@ namespace twitch_stream_check
         /// Background timer to check streams
         /// </summary>
         private System.Timers.Timer tStreamsTimer;
+        /// <summary>
+        /// Latest start time of the stream check timer
+        /// </summary>
         private DateTime tStreamsTimerLastStart;
         /// <summary>
         /// Background timer to check important streams
         /// </summary>
         private System.Timers.Timer tStreamsImportantTimer;
+        /// <summary>
+        /// Latest starttime of the Important timer
+        /// </summary>
         private DateTime tStreamsImportantTimerLastStart;
         /// <summary>
         /// Background timer to update tooltip info
@@ -95,6 +103,9 @@ namespace twitch_stream_check
         /// True if the Account info Balloon is currently shown
         /// </summary>
         private bool bAccountToolTipDisplayed;
+        /// <summary>
+        /// Short timer for Account info Balloon display
+        /// </summary>
         private System.Timers.Timer tAccountBalloonTimer;
         
         public MainForm()
@@ -108,9 +119,7 @@ namespace twitch_stream_check
             this.CreateControl();
             MyMenu.CreateControl();
             
-            //
-            // TODO: Add constructor code after the InitializeComponent() call.
-            //
+            // We currently do not need this here
             this.Hide();
             
             // load error logging
@@ -141,11 +150,10 @@ namespace twitch_stream_check
             
             // create a new timer to run stuff at given interval
             tStreamsTimer = new System.Timers.Timer();
-            // FIXME RELEASE: Make sure to set checkinterval timer for release!
             // start timer with 1000ms * 60s * interval-minutes
             tStreamsTimer.Interval = (settings.checkinterval * 60 * 1000);
 #if _HACK
-            tStreamsTimer.Interval = 15000; // uncomment this for faster cycles on small entries
+            tStreamsTimer.Interval = 15000; // uncomment this for faster cycles for testing
 #endif
             // redo associated actions
             tStreamsTimer.AutoReset = true;
@@ -313,11 +321,20 @@ namespace twitch_stream_check
             objSettingsForm.Focus();
         }
         
+        /// <summary>
+        /// Set the timer for important and normal stream checks
+        /// </summary>
+        /// <param name="iTimer">Time in minutes</param>
         public void SetTimer(int iTimer)
         {
             this.SetTimer(iTimer, "");
         }
         
+        /// <summary>
+        /// Set the timer for important and normal stream checks
+        /// </summary>
+        /// <param name="iTimer">Time in minutes</param>
+        /// <param name="sType">"important" for important anything else for normal timer</param>
         public void SetTimer(int iTimer, string sType)
         {
             switch (sType) {
@@ -458,6 +475,10 @@ namespace twitch_stream_check
             return bRet;
         }
         
+        /// <summary>
+        /// Update ToolTip info
+        /// </summary>
+        /// <returns>Always returns true</returns>
         private bool UpdateToolTip()
         {
             if (this.InvokeRequired)
@@ -513,11 +534,15 @@ namespace twitch_stream_check
             }
 //            notifyIcon1.Text = sText + sAdd + sAccount; // tooltip max 63 chars
             notifyIcon1.Text = sText + sAdd;
-//            MyMenu.Invoke((MethodInvoker) delegate {notifyIcon1.Text = s;});
-            Debug.WriteLineIf(GlobalVar.DEBUG, "UPDATETOOLTIP: " + notifyIcon1.Text);
+//            Debug.WriteLineIf(GlobalVar.DEBUG, "UPDATETOOLTIP: " + notifyIcon1.Text);
             return true;
         }
         
+        /// <summary>
+        /// Display own Account info
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ShowAccountToolTip(object sender, EventArgs e)
         {
             if (!bAccountToolTipDisplayed) {
@@ -531,12 +556,17 @@ namespace twitch_stream_check
                 
                 try {
                     notifyIcon1.ShowBalloonTip(2500, settings.checkaccount, sAccountOnlineData, ToolTipIcon.Info);
-                } catch (Exception ex) {
+                } catch (Exception) {
                     // text could be empty
                 }
             }
         }
         
+        /// <summary>
+        /// Timer elapsed for Account info display, free to fire again
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ShowAccountToolTipDone(object sender, EventArgs e)
         {
             bAccountToolTipDisplayed = false;
@@ -558,23 +588,11 @@ namespace twitch_stream_check
             sAccount = Functions.ConvertAlphaNum(sAccount);
             const string sBaseURL = "https://api.twitch.tv/kraken/streams/";
             string sParams = "";
-            string responseString = "";
             
             string sURL = sBaseURL + sAccount + sParams;
             Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Created URL: " + sURL);
             WebCheck = Functions.DoWebRequest(sURL);
             if (sAccount != "" && (WebCheck.HttpWResp.StatusCode == HttpStatusCode.OK)) {
-                Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Parsing WebResponse");
-//                try {
-//                    using (Stream stream = WebCheck.HttpWResp.GetResponseStream()) {
-//                        StreamReader reader = new StreamReader(stream, Encoding.UTF8);
-//                        responseString = reader.ReadToEnd();
-//                    }
-//                } catch (Exception ex) {
-//                    Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Failed on datastream: " + ex.Message);
-//                    Log.Add("GetOnlineStatus>" + ex.Message);
-//                }
-                
                 dynamic data = Functions.ParseWebResponseToObject(WebCheck.HttpWResp);
                 Debug.WriteLineIf(GlobalVar.DEBUG, "GETONLINESTATUS: Creating workable object from json response");
                 try {
@@ -702,10 +720,11 @@ namespace twitch_stream_check
                 iCurrentCheck = 0;
             } else {
                 Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKSTREAMS: Another check is still running..." + iCurrentCheck + "/" + iMaxCheck);
-                // FIXME RELEASE: Make sure to have this enabled for release! So users get a warning when their list can't be processed in between intervals.
+#if RELEASE
                 MessageBox.Show("Consider raising the interval a bit." + Environment.NewLine + "Processing " + iCurrentCheck + "/" + iMaxCheck + Environment.NewLine + Environment.NewLine +
                                 "If this message keeps coming up over and over again at the same step then consider restarting the program.",
                                 "Check already running", MessageBoxButtons.OK, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1);
+#endif
             }
         }
         
@@ -737,32 +756,45 @@ namespace twitch_stream_check
                 bGettingImportantData = false;
             } else {
                 Debug.WriteLineIf(GlobalVar.DEBUG, "CHECKSTREAMS: Another check is still running..." + iCurrentCheck + "/" + iMaxCheck);
-                // FIXME RELEASE: Make sure to have this enabled for release! So users get a warning when their list can't be processed in between intervals.
+#if RELEASE
                 MessageBox.Show("Consider raising the important interval a bit." + Environment.NewLine + "Processing important streams" + Environment.NewLine + Environment.NewLine +
                                 "If this message keeps coming up over and over again consider putting less streams on important or raise important check interval.",
                                 "Important Check already running", MessageBoxButtons.OK, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button1);
+#endif
             }
         }
         
+        /// <summary>
+        /// Filters the list of streams to cut out unwanted entries
+        /// </summary>
+        /// <param name="aCheckUsers">List of all streams</param>
+        /// <param name="sType">"important" for important streams, anything else for normal streams</param>
+        /// <returns>List of Streams as requested</returns>
         private IList<TwStream> RemoveUnwantedStreams(IList<TwStream> aCheckUsers, string sType)
         {
             int iMax = aCheckUsers.Count;
+            Debug.WriteLineIf(GlobalVar.DEBUG, "REMOVEUNWANTEDSTREAMS: Current streamcount: " + iMax + " cutting to type: " + sType);
             IList<TwStream> aUsers = new List<TwStream>();
             for (int i = 0; i < iMax; i++) {
                 switch (sType) {
                     // add important streams to return list
                     case "important":
-                        if (aCheckUsers[i].bImportant)
-                        {
+                        if (aCheckUsers[i].bImportant) {
+                            Debug.WriteLineIf(GlobalVar.DEBUG, "REMOVEUNWANTEDSTREAMS: important add: " + i);
                             aUsers.Add(aCheckUsers[i]);
                         }
                         break;
                     // add normal streams to return list
                     default:
-                        aUsers.Add(aCheckUsers[i]);
+                        if (!aCheckUsers[i].bImportant) {
+                            Debug.WriteLineIf(GlobalVar.DEBUG, "REMOVEUNWANTEDSTREAMS: normal add: " + i);
+                            aUsers.Add(aCheckUsers[i]);
+                        }
                         break;
                 }
             }
+            iMax = aUsers.Count;
+            Debug.WriteLineIf(GlobalVar.DEBUG, "REMOVEUNWANTEDSTREAMS: returned streamcount: " + iMax);
             return aUsers;
         }
         
@@ -819,13 +851,33 @@ namespace twitch_stream_check
             
             // add default entries when list is empty
             if (settings.streams == null) {
-                // FIXME RELEASE: set default streams
-                string[] streamers = new string[] {"Autositz", "DRUCKWELLETV", "Garrynewman", "Denkii"};
-//                string[] streamers = new string[] {"Entry 1", "Entry 2", "Entry 3", "Entry 4"};
+#if RELEASE
+                string[] streamers = new string[] {"Autositz",
+                                                    "DRUCKWELLETV",
+                                                    "Garrynewman",
+                                                    "Denkii",
+                                                    "dieischaemie",
+                                                    "derunf4ssbare",
+                                                    "Kernkraft3000",
+                                                    "Schmiddi1994",
+                                                    "FeddeOeng",
+                                                    "derlarryf",
+                                                    "taroon_tv",
+                                                    "dwCorium",
+                                                    "LordVictim",
+                                                    "dw_m4d3"
+                                                };
+#else
+                string[] streamers = new string[] {"Entry1", "Entry2", "Entry3", "Entry4"};
+#endif
                 settings.streams = new List<TwStream>();
                 foreach (string s in streamers) {
                     TwStream s2 = new TwStream();
-                    s2.bImportant= true;
+                    if (s == "Autositz" || s == "DRUCKWELLETV" || s == "Garrynewman") {
+                        s2.bImportant = true;
+                    } else {
+                        s2.bImportant = false;
+                    }
                     s2.sStreamname = s;
                     settings.streams.Add(s2);
                 }

@@ -222,6 +222,14 @@ namespace twitch_stream_check
             return i;
         }
         
+        /// <summary>
+        /// Finds the position of the Nth occurrance of Search in Text
+        /// <para>Wrapper to start at the beginning</para>
+        /// </summary>
+        /// <param name="sText">String to search in</param>
+        /// <param name="sSearch">String to search for</param>
+        /// <param name="iOccurred">Which occurance to return</param>
+        /// <returns>Position of Nth occurance of sSearch in sText</returns>
         public static int GetNthIndex(string sText, string sSearch, int iOccurred)
         {
             return GetNthIndex(sText, sSearch, iOccurred, 0, 1);
@@ -229,11 +237,11 @@ namespace twitch_stream_check
         /// <summary>
         /// Finds the position of the Nth occurrance of Search in Text
         /// </summary>
-        /// <param name="sText"></param>
-        /// <param name="sSearch"></param>
-        /// <param name="iOccurred">int </param>
-        /// <param name="iPos"></param>
-        /// <param name="iRunning"></param>
+        /// <param name="sText">String to search in</param>
+        /// <param name="sSearch">String to search for</param>
+        /// <param name="iOccurred">Which occurance to return</param>
+        /// <param name="iPos">Position to start at - for recursion</param>
+        /// <param name="iRunning">Current loop count - for recursion</param>
         /// <returns>Position of the Nth Occurrance</returns>
         public static int GetNthIndex(string sText, string sSearch, int iOccurred, int iPos, int iRunning)
         {
@@ -287,6 +295,11 @@ namespace twitch_stream_check
             return WebCheck;
         }
         
+        /// <summary>
+        /// Return JSON deserialized object from HttpWebResponse
+        /// </summary>
+        /// <param name="HttpWResp">Valid web response object</param>
+        /// <returns>data or null if fails</returns>
         public static object ParseWebResponseToObject(HttpWebResponse HttpWResp)
         {
             string responseString = "";
@@ -314,6 +327,10 @@ namespace twitch_stream_check
     {
         private const string DEFAULT_FILENAME = "twitch-stream-check-settings.json";
         
+        /// <summary>
+        /// Dummy to store any object in json format
+        /// </summary>
+        /// <param name="obj"></param>
         public void Save(object obj)
         {
             File.WriteAllText("bla.json", JsonConvert.SerializeObject(obj));

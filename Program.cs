@@ -60,6 +60,12 @@ namespace twitch_stream_check
             
         }
         
+        /// <summary>
+        /// Load embedded resources if no .dll is present
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="args"></param>
+        /// <returns></returns>
         static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
         {
             // get a list of included resources for debugging
@@ -84,6 +90,10 @@ namespace twitch_stream_check
             }
         }
         
+        /// <summary>
+        /// Dummy to display embedded resources
+        /// </summary>
+        /// <returns></returns>
         static string[] GetListOfEmbeddedResources()
         {
             return  Assembly.GetExecutingAssembly().GetManifestResourceNames();

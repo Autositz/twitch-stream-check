@@ -64,6 +64,10 @@ namespace twitch_stream_check
             
         }
         
+        /// <summary>
+        /// Wrapper for starting to put default data
+        /// </summary>
+        /// <returns></returns>
         public MySettings Start()
         {
             this.Start(this.settings);
@@ -101,16 +105,6 @@ namespace twitch_stream_check
             i = Functions.GetNthIndex(linkLabelFeedback.Text, "Send Feedback", 2);
             Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGSFORM: Send Feedback 2 located at: " + i);
             linkLabelFeedback.Links.Add( i, 13, "steam://friends/message/76561197960330502"); // autositz: 76561197960330502  kretze: 76561197993179564
-            
-            
-            // for testing purpose only, form needs to be initialized first, timer inits only once
-//            System.Timers.Timer tTimerFirst = new System.Timers.Timer();
-//            tTimerFirst.AutoReset = false;
-//            tTimerFirst.Interval = 10000;
-//            tTimerFirst.Elapsed += new ElapsedEventHandler(doTimer);
-//            tTimerFirst.Enabled = false;
-//            Task.Factory.StartNew(checkStreams);
-            
             
             
             return this.settings;
@@ -176,6 +170,7 @@ namespace twitch_stream_check
             objMainForm.settings = this.settings;
             this.Dispose();
         }
+        
         /// <summary>
         /// Close the Settings menu without storing data
         /// </summary>
@@ -187,29 +182,6 @@ namespace twitch_stream_check
             this.Visible = false;
             // TODO MAIN: make sure all data is stored in mainform!!!
             this.Dispose();
-        }
-        
-        /// <summary>
-        /// Close the Settings menu without storing data
-        /// </summary>
-        /// <param name="sender">SettingsForm</param>
-        /// <param name="e">FormClosingEventArgs</param>
-        private void SettingsForm_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGSFORM_FORMCLOSING: Someone clicked Close");
-            if (e.CloseReason == CloseReason.UserClosing) {
-                Debug.WriteLineIf(GlobalVar.DEBUG, "SETTINGSFORM_FORMCLOSING: User closed the form");
-                e.Cancel = true;
-                
-                // TODO: lazy work to hide the form, remove it and recreate maybe? no need to hold the settings form in memory all the time i guess...
-                SettingsForm senders = sender as SettingsForm;
-                if (senders != null) {
-                    senders.Hide();
-                }
-                
-                // TODO MAIN: make sure all data is stored in mainform!!!
-                this.Dispose();
-            }
         }
         
         /// <summary>
@@ -273,26 +245,6 @@ namespace twitch_stream_check
         }
         
         /// <summary>
-        /// Resize columns to usefull needs but keep the possibility of user resize afterwards (will get reset after each new input)
-        /// Maybe not needed when Streamnames are set to Fill?
-        /// TODO: Obselete?
-        /// </summary>
-        private void ResizeColumns()
-        {
-            int iMax = dgvStreams.Columns.Count;
-            Debug.WriteLineIf(GlobalVar.DEBUG, "RESIZECOLUMNS: Columns: " + iMax);
-            int iWidth = 0;
-            // skip the first column as it should never change
-            for (int i = 1; i < iMax; i++) {
-                Debug.WriteLineIf(GlobalVar.DEBUG, "RESIZECOLUMNS: ColumnType[" + i + "]: " + dgvStreams.Columns[i].CellType);
-                dgvStreams.Columns[i].AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells;
-                iWidth = dgvStreams.Columns[i].Width;
-                dgvStreams.Columns[i].AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
-                dgvStreams.Columns[i].Width = iWidth;
-            }
-        }
-        
-        /// <summary>
         /// Get all streams an account is following, requires auth token!
         /// </summary>
         /// <param name="sAccount">Stream account to check</param>
@@ -325,6 +277,11 @@ namespace twitch_stream_check
             return bSuccess;
         }
         
+        /// <summary>
+        /// Open Feedback links
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void linkLabelFeedback_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             string sLink = e.Link.LinkData.ToString();
@@ -409,6 +366,9 @@ namespace twitch_stream_check
         }
     }
     
+    /// <summary>
+    /// Class to change left-right Padding of DataGridViewButton
+    /// </summary>
     public class twDataGridViewButtonColumn : DataGridViewButtonColumn
     {
         public override DataGridViewCellStyle DefaultCellStyle {
